@@ -1,118 +1,135 @@
 -- ============================================================================
---  Seed / repair a platform-admin login.
+--  Create / repair a platform-admin login.
 --
---  Run this in Supabase → SQL Editor against the shared project (the one the
---  Pharma Portal connects to). Safe to re-run: it creates the account if it is
---  missing and just resets the password if it already exists.
+--  Run in Supabase → SQL Editor, against the shared project (the one the
+--  Pharma Portal connects to).
 --
---  ⚠  EDIT THE FIVE VALUES IN THE `declare` BLOCK BELOW, THEN RUN THE WHOLE FILE.
---  ⚠  Do NOT commit a real password. Keep this file's password as a placeholder
---     and paste your real one straight into the SQL Editor instead.
+--  HOW TO RUN: press Ctrl+A to select the WHOLE file, then Run.
+--  Every statement below is complete on its own, so running a subset is safe —
+--  but you want all of them.
 --
---  This is NOT a migration — it lives outside supabase/migrations/ so it is
+--  BEFORE YOU RUN: edit step 2 and put your real password in place of
+--  REPLACE-WITH-A-STRONG-PASSWORD (6+ characters).
+--  Leave the placeholder in this file — never commit a real password.
+--
+--  This is NOT a migration. It lives outside supabase/migrations/ so it is
 --  never applied automatically.
 -- ============================================================================
 
-do $$
-declare
-  admin_email    text := 'piyush80545@gmail.com';          -- login email
-  admin_password text := 'REPLACE-WITH-A-STRONG-PASSWORD'; -- min 6 characters
-  admin_name     text := 'Piyush';                         -- display name
-  org_name       text := 'Pharma Strategies';              -- organisation shown in the UI
-  tenant_name    text := 'Pharma Strategies';              -- the pharmacy tenant this admin owns
-
-  admin_id uuid;
-  tenant   uuid;
-begin
-  -- ------------------------------------------------------------------------
-  -- 1. The auth account. GoTrue stores passwords as bcrypt hashes, so we hash
-  --    here with crypt() from pgcrypto. Confirming the email means you can sign
-  --    in immediately without clicking a confirmation link.
-  -- ------------------------------------------------------------------------
-  select id into admin_id from auth.users where email = admin_email;
-
-  if admin_id is null then
-    admin_id := gen_random_uuid();
-
-    insert into auth.users (
-      instance_id, id, aud, role, email, encrypted_password,
-      email_confirmed_at, created_at, updated_at,
-      raw_app_meta_data, raw_user_meta_data,
-      confirmation_token, recovery_token, email_change_token_new, email_change
-    ) values (
-      '00000000-0000-0000-0000-000000000000', admin_id, 'authenticated', 'authenticated',
-      admin_email, crypt(admin_password, gen_salt('bf')),
-      now(), now(), now(),
-      '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
-      '', '', '', ''
-    );
-
-    -- GoTrue also expects an identity row for email/password accounts.
-    insert into auth.identities (
-      id, user_id, provider_id, identity_data, provider,
-      last_sign_in_at, created_at, updated_at
-    ) values (
-      gen_random_uuid(), admin_id, admin_id::text,
-      jsonb_build_object('sub', admin_id::text, 'email', admin_email, 'email_verified', true),
-      'email', now(), now(), now()
-    );
-
-    raise notice 'Created auth user %', admin_email;
-  else
-    update auth.users
-       set encrypted_password = crypt(admin_password, gen_salt('bf')),
-           email_confirmed_at = coalesce(email_confirmed_at, now()),
-           updated_at         = now()
-     where id = admin_id;
-
-    raise notice 'Reset password for existing auth user %', admin_email;
-  end if;
-
-  -- ------------------------------------------------------------------------
-  -- 2. Profile — the display name / organisation the UI reads.
-  -- ------------------------------------------------------------------------
-  insert into public.profiles (id, full_name, role, organization)
-  values (admin_id, admin_name, 'pharmacy', org_name)
-  on conflict (id) do update
-    set full_name    = excluded.full_name,
-        organization = excluded.organization;
-
-  -- ------------------------------------------------------------------------
-  -- 3. The admin grant. This is what actually unlocks /admin.
-  -- ------------------------------------------------------------------------
-  insert into public.platform_admins (user_id)
-  values (admin_id)
-  on conflict (user_id) do nothing;
-
-  -- ------------------------------------------------------------------------
-  -- 4. A tenant to own, with this admin as its owner. Without a tenant
-  --    membership /workspace has nothing to show.
-  -- ------------------------------------------------------------------------
-  select id into tenant from public.tenants where name = tenant_name;
-
-  if tenant is null then
-    insert into public.tenants (name, plan)
-    values (tenant_name, 'pro')
-    returning id into tenant;
-  end if;
-
-  insert into public.tenant_members (tenant_id, user_id, role, is_active)
-  values (tenant, admin_id, 'owner', true)
-  on conflict (tenant_id, user_id) do update
-    set role = 'owner', is_active = true;
-
-  -- ------------------------------------------------------------------------
-  -- 5. Turn the base features on for that tenant.
-  -- ------------------------------------------------------------------------
-  insert into public.tenant_features (tenant_id, feature_key, enabled)
-  select tenant, f.key, true from public.features f where f.type = 'base'
-  on conflict (tenant_id, feature_key) do update set enabled = true;
-
-  raise notice 'Done. Sign in as % with the password you set above.', admin_email;
-end $$;
 
 -- ---------------------------------------------------------------------------
--- Verify
+-- 1. Make sure the auth account exists.
+--    Passwords are bcrypt-hashed by Supabase Auth, so we hash with crypt().
+--    The password here is random filler — step 2 sets the real one.
+-- ---------------------------------------------------------------------------
+insert into auth.users (
+  instance_id, id, aud, role, email, encrypted_password,
+  email_confirmed_at, created_at, updated_at,
+  raw_app_meta_data, raw_user_meta_data,
+  confirmation_token, recovery_token, email_change_token_new, email_change
+)
+select
+  '00000000-0000-0000-0000-000000000000',
+  gen_random_uuid(),
+  'authenticated',
+  'authenticated',
+  'piyush80545@gmail.com',
+  crypt(gen_random_uuid()::text, gen_salt('bf')),
+  now(), now(), now(),
+  '{"provider":"email","providers":["email"]}'::jsonb,
+  '{}'::jsonb,
+  '', '', '', ''
+where not exists (
+  select 1 from auth.users where email = 'piyush80545@gmail.com'
+)
+on conflict do nothing;
+
+
+-- ---------------------------------------------------------------------------
+-- 2. ★★★ SET YOUR PASSWORD HERE ★★★
+--    Confirming the email lets you sign in straight away.
+-- ---------------------------------------------------------------------------
+update auth.users
+   set encrypted_password  = crypt('REPLACE-WITH-A-STRONG-PASSWORD', gen_salt('bf')),
+       email_confirmed_at  = coalesce(email_confirmed_at, now()),
+       updated_at          = now()
+ where email = 'piyush80545@gmail.com';
+
+
+-- ---------------------------------------------------------------------------
+-- 3. Identity row — GoTrue expects one for email/password accounts.
+-- ---------------------------------------------------------------------------
+insert into auth.identities (
+  id, user_id, provider_id, identity_data, provider,
+  last_sign_in_at, created_at, updated_at
+)
+select
+  gen_random_uuid(),
+  u.id,
+  u.id::text,
+  jsonb_build_object('sub', u.id::text, 'email', u.email, 'email_verified', true),
+  'email',
+  now(), now(), now()
+from auth.users u
+where u.email = 'piyush80545@gmail.com'
+  and not exists (select 1 from auth.identities i where i.user_id = u.id)
+on conflict do nothing;
+
+
+-- ---------------------------------------------------------------------------
+-- 4. Profile — display name and organisation shown in the UI.
+-- ---------------------------------------------------------------------------
+insert into public.profiles (id, full_name, role, organization)
+select u.id, 'Piyush', 'pharmacy', 'Pharma Strategies'
+from auth.users u
+where u.email = 'piyush80545@gmail.com'
+on conflict (id) do update
+  set full_name    = excluded.full_name,
+      organization = excluded.organization;
+
+
+-- ---------------------------------------------------------------------------
+-- 5. The admin grant. THIS is what unlocks /admin.
+-- ---------------------------------------------------------------------------
+insert into public.platform_admins (user_id)
+select u.id
+from auth.users u
+where u.email = 'piyush80545@gmail.com'
+on conflict (user_id) do nothing;
+
+
+-- ---------------------------------------------------------------------------
+-- 6. A tenant to own. Without a tenant membership /workspace has nothing to
+--    show you.
+-- ---------------------------------------------------------------------------
+insert into public.tenants (name, plan)
+select 'Pharma Strategies', 'pro'
+where not exists (select 1 from public.tenants where name = 'Pharma Strategies');
+
+insert into public.tenant_members (tenant_id, user_id, role, is_active)
+select t.id, u.id, 'owner', true
+from public.tenants t
+cross join auth.users u
+where t.name = 'Pharma Strategies'
+  and u.email = 'piyush80545@gmail.com'
+on conflict (tenant_id, user_id) do update
+  set role = 'owner', is_active = true;
+
+
+-- ---------------------------------------------------------------------------
+-- 7. Switch the base features on for that tenant.
+-- ---------------------------------------------------------------------------
+insert into public.tenant_features (tenant_id, feature_key, enabled)
+select t.id, f.key, true
+from public.tenants t
+cross join public.features f
+where t.name = 'Pharma Strategies'
+  and f.type = 'base'
+on conflict (tenant_id, feature_key) do update set enabled = true;
+
+
+-- ---------------------------------------------------------------------------
+-- 8. Verify — you want confirmed = true and is_platform_admin = true.
 -- ---------------------------------------------------------------------------
 select
   u.email,

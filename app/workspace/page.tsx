@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
-import { ShieldCheck } from 'lucide-react'
+import { redirect } from 'next/navigation'
+import { ShieldCheck, Wrench } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getSessionTenant } from '@/lib/features/server'
 import { loadWorkspaceData } from '@/lib/workspace/data'
@@ -27,27 +27,43 @@ export default async function WorkspacePage() {
   ])
   const isPlatformAdmin = Boolean(adminResult.data)
 
+  // Signed in, but not attached to a pharmacy workspace. Never a 404 — a signed-in
+  // user needs to be told what to do, not shown a dead end.
   if (!context) {
-    // A platform admin with no tenant still needs a way back to the console.
-    if (!isPlatformAdmin) notFound()
-
     return (
       <main className="ws-shell flex min-h-dvh flex-col items-center justify-center gap-4 bg-paper px-6 text-center">
         <span className="flex size-11 items-center justify-center rounded-full bg-sage/20 text-evergreen">
-          <ShieldCheck className="size-5" aria-hidden="true" />
+          {isPlatformAdmin ? (
+            <ShieldCheck className="size-5" aria-hidden="true" />
+          ) : (
+            <Wrench className="size-5" aria-hidden="true" />
+          )}
         </span>
         <div>
-          <h1 className="ws-title">No workspace assigned</h1>
+          <h1 className="ws-title">
+            {isPlatformAdmin ? 'No workspace assigned' : 'Your account isn’t set up yet'}
+          </h1>
           <p className="ws-subtitle">
-            You are a platform admin, but you are not a member of any pharmacy tenant yet.
+            {isPlatformAdmin
+              ? 'You are a platform admin, but you are not a member of any pharmacy tenant yet.'
+              : 'You are signed in, but no pharmacy workspace has been assigned to you yet. Ask your administrator to add you to one.'}
           </p>
         </div>
-        <Link
-          href="/admin"
-          className="inline-flex items-center gap-1.5 rounded-md bg-evergreen px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-evergreen/90"
-        >
-          Open the admin console
-        </Link>
+        {isPlatformAdmin ? (
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-1.5 rounded-md bg-evergreen px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-evergreen/90"
+          >
+            Open the admin console
+          </Link>
+        ) : (
+          <Link
+            href="/chat"
+            className="inline-flex items-center gap-1.5 rounded-md bg-evergreen px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-evergreen/90"
+          >
+            Go to Chat with Home
+          </Link>
+        )}
       </main>
     )
   }
