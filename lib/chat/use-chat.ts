@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createChatBackend } from './backend'
 import type {
   AuthorizedHome,
@@ -20,8 +20,8 @@ export type ChatController = {
   error: string | null
   homes: AuthorizedHome[]
   conversations: ConversationSummary[]
-  activeHomeId: string | null
   activeConversationId: string | null
+  activeHomeId: string | null
   activeSummary: ConversationSummary | null
   messages: ChatMessage[]
   reads: ConversationRead[]
@@ -30,7 +30,8 @@ export type ChatController = {
   sending: boolean
   sendError: string | null
   selfUserId: string | null
-  selectHome: (homeId: string) => void
+  selectConversation: (conversationId: string) => void
+  startConversation: (homeId: string) => void
   sendMessage: (input: Omit<SendMessageInput, 'conversationId'>) => Promise<boolean>
   retry: () => void
 }
@@ -42,8 +43,10 @@ const fallbackMessage = 'Something went wrong. Please try again.'
  * updates and optimistic sends. Backend-agnostic — it works against Supabase or
  * the preview data set without the components knowing the difference.
  *
- * Threads are created lazily, on the first message. Merely browsing a home never
- * writes to the database.
+ * The unit of work is a *conversation* (a thread), not a home: the Nursing Home
+ * portal can hold several threads per home, and the pharmacy must reply inside
+ * the same thread the home is reading. Threads are created lazily, on the first
+ * message, and only when the home has no thread at all.
  */
 export function useChatData(): ChatController {
   const [backend, setBackend] = useState<ChatBackend | null>(null)
@@ -53,11 +56,8 @@ export function useChatData(): ChatController {
   const [selfUserId, setSelfUserId] = useState<string | null>(null)
   const [homes, setHomes] = useState<AuthorizedHome[]>([])
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
   const [activeHomeId, setActiveHomeId] = useState<string | null>(null)
-  const [createdConversation, setCreatedConversation] = useState<{
-    homeId: string
-    conversationId: string
-  } | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [reads, setReads] = useState<ConversationRead[]>([])
   const [threadStatus, setThreadStatus] = useState<ThreadStatus>('idle')
@@ -68,15 +68,6 @@ export function useChatData(): ChatController {
 
   const selfIdRef = useRef<string | null>(null)
   const activeConversationRef = useRef<string | null>(null)
-
-  // The conversation for the selected home. A thread created by sending the first
-  // message is remembered locally until the refreshed list includes it.
-  const activeConversationId = useMemo(() => {
-    if (createdConversation && createdConversation.homeId === activeHomeId) {
-      return createdConversation.conversationId
-    }
-    return conversations.find((conversation) => conversation.homeId === activeHomeId)?.conversationId ?? null
-  }, [createdConversation, activeHomeId, conversations])
 
   useEffect(() => {
     selfIdRef.current = selfUserId
@@ -119,7 +110,7 @@ export function useChatData(): ChatController {
     [],
   )
 
-  // Initial load of authorized homes + conversation summaries.
+  // Initial load of authorized homes + conversation threads.
   useEffect(() => {
     if (!backend) return
     let cancelled = false
@@ -134,10 +125,10 @@ export function useChatData(): ChatController {
         setHomes(snapshot.homes)
         setConversations(snapshot.conversations)
         setStatus('ready')
-        setActiveHomeId((current) => {
-          if (current) return current
-          return snapshot.conversations[0]?.homeId ?? snapshot.homes[0]?.id ?? null
-        })
+        // Open the most recently active thread by default, like the home portal.
+        const latest = snapshot.conversations[0] ?? null
+        setActiveConversationId((current) => current ?? latest?.conversationId ?? null)
+        setActiveHomeId((current) => current ?? latest?.homeId ?? snapshot.homes[0]?.id ?? null)
       })
       .catch((loadError: unknown) => {
         if (cancelled) return
@@ -211,7 +202,37 @@ export function useChatData(): ChatController {
     })
   }, [backend, refreshSummaries, scheduleRefresh])
 
-  const selectHome = useCallback((homeId: string) => {
+  // Safety net: realtime is the primary path, but a slow poll guarantees the
+  // pharmacy still receives messages if a realtime subscription is blocked
+  // (for example by a row-level security policy on the shared tables).
+  useEffect(() => {
+    if (!backend) return
+    const interval = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return
+      void refreshSummaries()
+      const conversationId = activeConversationRef.current
+      if (!conversationId) return
+      void backend
+        .loadMessages(conversationId)
+        .then((thread) => setMessages(thread))
+        .catch(() => undefined)
+    }, 20_000)
+    return () => window.clearInterval(interval)
+  }, [backend, refreshSummaries])
+
+  const selectConversation = useCallback(
+    (conversationId: string) => {
+      setActiveConversationId(conversationId)
+      const summary = conversations.find((item) => item.conversationId === conversationId)
+      if (summary) setActiveHomeId(summary.homeId)
+    },
+    [conversations],
+  )
+
+  // Preparing a brand-new thread for a home: nothing is written until the first
+  // message is sent, so merely browsing never creates rows.
+  const startConversation = useCallback((homeId: string) => {
+    setActiveConversationId(null)
     setActiveHomeId(homeId)
   }, [])
 
@@ -225,7 +246,7 @@ export function useChatData(): ChatController {
         let conversationId = activeConversationId
         if (!conversationId) {
           conversationId = await backend.ensureConversation(activeHomeId)
-          setCreatedConversation({ homeId: activeHomeId, conversationId })
+          setActiveConversationId(conversationId)
         }
 
         const message = await backend.sendMessage({ ...input, conversationId })
@@ -256,8 +277,8 @@ export function useChatData(): ChatController {
     error,
     homes,
     conversations,
-    activeHomeId,
     activeConversationId,
+    activeHomeId,
     activeSummary,
     messages,
     reads,
@@ -266,7 +287,8 @@ export function useChatData(): ChatController {
     sending,
     sendError,
     selfUserId,
-    selectHome,
+    selectConversation,
+    startConversation,
     sendMessage,
     retry,
   }

@@ -16,6 +16,12 @@ import type {
 // The live backend reads and writes the shared Supabase tables that the Nursing
 // Home Portal also uses, so both portals see the same conversations in real time.
 //
+// A "conversation" row is the unit of sharing: the Nursing Home portal can hold
+// several threads for one home (each with a title). This backend therefore lists
+// conversations — not homes — so the pharmacy always replies inside the exact
+// thread the home is reading. Replies are only ever written to an existing
+// thread; a new one is created solely when the home has none at all.
+//
 // Deliberately uses only plain table reads (no database functions/RPCs) so it
 // depends on nothing beyond SELECT/INSERT privileges + RLS.
 
@@ -32,9 +38,15 @@ type MessageRow = {
 
 type ConversationRow = {
   id: string
-  home_id: string
+  home_id: string | null
+  title: string | null
+  last_message_body: string | null
+  last_message_sender_name: string | null
+  last_message_at: string | null
   created_at: string
 }
+
+type HomeConversationRow = ConversationRow & { home_id: string }
 
 type SummaryMessageRow = {
   conversation_id: string
@@ -101,7 +113,9 @@ export function createSupabaseChatBackend(): ChatBackend {
 
       const [homesResult, conversationsResult] = await Promise.all([
         supabase.from('homes').select('id, name').order('name', { ascending: true }),
-        supabase.from('conversations').select('id, home_id, created_at'),
+        supabase
+          .from('conversations')
+          .select('id, home_id, title, last_message_body, last_message_sender_name, last_message_at, created_at'),
       ])
       if (homesResult.error) throw toChatError(homesResult.error)
       if (conversationsResult.error) throw toChatError(conversationsResult.error)
@@ -110,7 +124,13 @@ export function createSupabaseChatBackend(): ChatBackend {
         id: home.id,
         name: home.name,
       }))
-      const conversations = (conversationsResult.data ?? []) as ConversationRow[]
+      const homeNames = new Map(homes.map((home) => [home.id, home.name]))
+
+      // Keep every thread that is attached to a home this user is authorized for.
+      const conversations = ((conversationsResult.data ?? []) as ConversationRow[]).filter(
+        (conversation): conversation is HomeConversationRow =>
+          conversation.home_id !== null && homeNames.has(conversation.home_id),
+      )
       if (!selfUserId || conversations.length === 0) {
         return { selfUserId, homes, conversations: [] }
       }
@@ -134,7 +154,6 @@ export function createSupabaseChatBackend(): ChatBackend {
       )
 
       const recent = (messagesResult.data ?? []) as SummaryMessageRow[]
-      const homeNames = new Map(homes.map((home) => [home.id, home.name]))
 
       const summaries: ConversationSummary[] = conversations
         .map((conversation) => {
@@ -151,9 +170,10 @@ export function createSupabaseChatBackend(): ChatBackend {
             conversationId: conversation.id,
             homeId: conversation.home_id,
             homeName: homeNames.get(conversation.home_id) ?? 'Nursing home',
-            lastMessageBody: last?.body ?? null,
-            lastMessageSenderName: last?.sender_name ?? null,
-            lastMessageAt: last?.created_at ?? conversation.created_at,
+            title: conversation.title?.trim() || null,
+            lastMessageBody: last?.body ?? conversation.last_message_body,
+            lastMessageSenderName: last?.sender_name ?? conversation.last_message_sender_name,
+            lastMessageAt: last?.created_at ?? conversation.last_message_at ?? conversation.created_at,
             unreadCount: unread.length,
             hasUrgent: unread.some((message) => normalizeUrgency(message.urgency) !== 'routine'),
           }
@@ -187,11 +207,15 @@ export function createSupabaseChatBackend(): ChatBackend {
     },
 
     async ensureConversation(homeId: string): Promise<string> {
+      // Reuse the home's most recently active thread. Creating a second thread for
+      // a home that already has one is what makes the two portals talk past each
+      // other, so this only inserts when there is genuinely nothing to reuse.
       const { data: existing, error: existingError } = await supabase
         .from('conversations')
         .select('id')
         .eq('home_id', homeId)
-        .order('created_at', { ascending: true })
+        .order('last_message_at', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
       if (existingError) throw toChatError(existingError)

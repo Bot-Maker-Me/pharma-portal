@@ -29,6 +29,7 @@ type PreviewConversation = {
   id: string
   homeId: string
   homeName: string
+  title: string | null
   lastMessageBody: string | null
   lastMessageSenderName: string | null
   lastMessageAt: string
@@ -47,14 +48,25 @@ const conversations: PreviewConversation[] = [
     id: 'conv-riverbend',
     homeId: 'home-riverbend',
     homeName: 'Riverbend Care Centre',
+    title: 'Medicine supply',
     lastMessageBody: "Perfect — I'll flag it for the afternoon delivery run.",
     lastMessageSenderName: 'Jordan Davis',
     lastMessageAt: minutesAgo(24),
   },
   {
+    id: 'conv-riverbend-2',
+    homeId: 'home-riverbend',
+    homeName: 'Riverbend Care Centre',
+    title: 'Blister packs',
+    lastMessageBody: 'Could you confirm the Tuesday cycle cut-off?',
+    lastMessageSenderName: 'Riverbend Care Centre',
+    lastMessageAt: hoursAgo(4),
+  },
+  {
     id: 'conv-harbour',
     homeId: 'home-harbour',
     homeName: 'Harbourview Nursing Home',
+    title: 'Blister pack — R-5502',
     lastMessageBody: 'Blister pack for R-5502 is ready for the Tuesday cycle.',
     lastMessageSenderName: 'Harbourview Nursing Home',
     lastMessageAt: hoursAgo(26),
@@ -104,6 +116,16 @@ const messages: ChatMessage[] = [
     urgency: 'routine',
     residentId: 'R-3118',
     createdAt: minutesAgo(24),
+  },
+  {
+    id: nextId('m'),
+    conversationId: 'conv-riverbend-2',
+    senderId: HOME_USER_ID,
+    senderName: 'Riverbend Care Centre',
+    body: 'Could you confirm the Tuesday cycle cut-off?',
+    urgency: 'routine',
+    residentId: null,
+    createdAt: hoursAgo(4),
   },
   {
     id: nextId('m'),
@@ -176,6 +198,7 @@ function summarize(): ConversationSummary[] {
         conversationId: conversation.id,
         homeId: conversation.homeId,
         homeName: conversation.homeName,
+        title: conversation.title,
         lastMessageBody: conversation.lastMessageBody,
         lastMessageSenderName: conversation.lastMessageSenderName,
         lastMessageAt: conversation.lastMessageAt,
@@ -218,13 +241,16 @@ export function createPreviewChatBackend(): ChatBackend {
     },
 
     async ensureConversation(homeId: string): Promise<string> {
-      const existing = conversations.find((conversation) => conversation.homeId === homeId)
+      const existing = conversations
+        .filter((conversation) => conversation.homeId === homeId)
+        .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))[0]
       if (existing) return existing.id
       const home = homes.find((item) => item.id === homeId)
       const conversation: PreviewConversation = {
         id: nextId('conv'),
         homeId,
         homeName: home?.name ?? 'Nursing home',
+        title: null,
         lastMessageBody: null,
         lastMessageSenderName: null,
         lastMessageAt: new Date().toISOString(),

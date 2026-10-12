@@ -17,8 +17,13 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
 
   const activeHome = chat.homes.find((home) => home.id === chat.activeHomeId) ?? null
 
-  function handleSelect(homeId: string) {
-    chat.selectHome(homeId)
+  function handleSelectConversation(conversationId: string) {
+    chat.selectConversation(conversationId)
+    setPane('thread')
+  }
+
+  function handleStartConversation(homeId: string) {
+    chat.startConversation(homeId)
     setPane('thread')
   }
 
@@ -77,8 +82,10 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
           <ConversationList
             homes={chat.homes}
             conversations={chat.conversations}
+            activeConversationId={chat.activeConversationId}
             activeHomeId={chat.activeHomeId}
-            onSelect={handleSelect}
+            onSelectConversation={handleSelectConversation}
+            onStartConversation={handleStartConversation}
             status={chat.status}
             error={chat.error}
             onRetry={chat.retry}
@@ -89,6 +96,7 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
           {activeHome ? (
             <MessageThread
               homeName={activeHome.name}
+              conversationTitle={chat.activeSummary?.title ?? null}
               messages={chat.messages}
               reads={chat.reads}
               selfUserId={chat.selfUserId}

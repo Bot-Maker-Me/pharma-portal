@@ -12,6 +12,7 @@ import type { ThreadStatus } from '@/lib/chat/use-chat'
 
 type MessageThreadProps = {
   homeName: string
+  conversationTitle: string | null
   messages: ChatMessage[]
   reads: ConversationRead[]
   selfUserId: string | null
@@ -27,6 +28,7 @@ type MessageThreadProps = {
 
 export function MessageThread({
   homeName,
+  conversationTitle,
   messages,
   reads,
   selfUserId,
@@ -75,10 +77,17 @@ export function MessageThread({
           className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-semibold text-ink-soft transition hover:bg-paper-deep md:hidden"
         >
           <ChevronLeft className="size-3.5" aria-hidden="true" />
-          Homes
+          Threads
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="chat-title truncate">{homeName}</h1>
+          <div className="flex min-w-0 items-center gap-2">
+            <h1 className="chat-title truncate">{homeName}</h1>
+            {conversationTitle && (
+              <span className="shrink-0 rounded bg-paper-deep px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
+                {conversationTitle}
+              </span>
+            )}
+          </div>
           <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-ink-soft">
             <ShieldCheck className="size-3.5 text-sage" aria-hidden="true" />
             Secure channel · shared with the Nursing Home portal

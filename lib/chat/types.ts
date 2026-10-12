@@ -22,6 +22,8 @@ export type ConversationSummary = {
   conversationId: string
   homeId: string
   homeName: string
+  /** Optional thread label set by the Nursing Home portal (e.g. "Medicine supply"). */
+  title: string | null
   lastMessageBody: string | null
   lastMessageSenderName: string | null
   lastMessageAt: string
