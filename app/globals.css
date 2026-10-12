@@ -139,6 +139,12 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 .chat-scroll::-webkit-scrollbar-thumb:hover { background: var(--sage); }
 .chat-message { animation: chat-message-in .22s ease-out both; }
 @keyframes chat-message-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+/* Sets the base size chat controls inherit. The global `button, input { font: inherit }`
+   rule is unlayered, so it outranks Tailwind's font utilities — controls take their size
+   from here instead. */
+.chat-shell { font-size: 14px; }
+/* The global `h1` rule is also unlayered, so heading sizes need to be set here. */
+.chat-title { margin: 0; color: var(--ink); font-size: 17px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em; }
 
 a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--coral); outline-offset: 3px; }
 .auth-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: rgba(23,33,29,.42); }

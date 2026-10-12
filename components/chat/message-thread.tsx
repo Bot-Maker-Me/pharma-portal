@@ -78,7 +78,7 @@ export function MessageThread({
           Homes
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-base font-semibold text-ink">{homeName}</h1>
+          <h1 className="chat-title truncate">{homeName}</h1>
           <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-ink-soft">
             <ShieldCheck className="size-3.5 text-sage" aria-hidden="true" />
             Secure channel · shared with the Nursing Home portal

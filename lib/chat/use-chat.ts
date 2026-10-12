@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createChatBackend } from './backend'
 import type {
   AuthorizedHome,
@@ -41,6 +41,9 @@ const fallbackMessage = 'Something went wrong. Please try again.'
  * Owns all chat state: the conversation list, the active thread, realtime
  * updates and optimistic sends. Backend-agnostic — it works against Supabase or
  * the preview data set without the components knowing the difference.
+ *
+ * Threads are created lazily, on the first message. Merely browsing a home never
+ * writes to the database.
  */
 export function useChatData(): ChatController {
   const [backend, setBackend] = useState<ChatBackend | null>(null)
@@ -51,7 +54,10 @@ export function useChatData(): ChatController {
   const [homes, setHomes] = useState<AuthorizedHome[]>([])
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const [activeHomeId, setActiveHomeId] = useState<string | null>(null)
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
+  const [createdConversation, setCreatedConversation] = useState<{
+    homeId: string
+    conversationId: string
+  } | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [reads, setReads] = useState<ConversationRead[]>([])
   const [threadStatus, setThreadStatus] = useState<ThreadStatus>('idle')
@@ -60,23 +66,25 @@ export function useChatData(): ChatController {
   const [sendError, setSendError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
 
-  const activeConversationRef = useRef<string | null>(null)
   const selfIdRef = useRef<string | null>(null)
+  const activeConversationRef = useRef<string | null>(null)
 
-  useEffect(() => {
-    activeConversationRef.current = activeConversationId
-  }, [activeConversationId])
+  // The conversation for the selected home. A thread created by sending the first
+  // message is remembered locally until the refreshed list includes it.
+  const activeConversationId = useMemo(() => {
+    if (createdConversation && createdConversation.homeId === activeHomeId) {
+      return createdConversation.conversationId
+    }
+    return conversations.find((conversation) => conversation.homeId === activeHomeId)?.conversationId ?? null
+  }, [createdConversation, activeHomeId, conversations])
 
   useEffect(() => {
     selfIdRef.current = selfUserId
   }, [selfUserId])
 
-  // Kept in a ref so the conversation-resolution effect does not re-run every
-  // time the summaries refresh (which would re-trigger ensureConversation).
-  const conversationsRef = useRef<ConversationSummary[]>([])
   useEffect(() => {
-    conversationsRef.current = conversations
-  }, [conversations])
+    activeConversationRef.current = activeConversationId
+  }, [activeConversationId])
 
   // Create the backend on the client only (avoids touching browser APIs during SSR).
   useEffect(() => {
@@ -142,39 +150,19 @@ export function useChatData(): ChatController {
     }
   }, [backend, reloadKey])
 
-  // Resolve the conversation for the selected home, creating one if needed.
+  // Load the active thread and mark it read. A home with no thread yet simply
+  // shows the "start the conversation" state until the first message is sent.
   useEffect(() => {
-    if (!backend || !activeHomeId) return
-    let cancelled = false
+    if (!backend) return
 
-    const existing = conversationsRef.current.find((conversation) => conversation.homeId === activeHomeId)
-    if (existing) {
-      setActiveConversationId(existing.conversationId)
+    if (!activeConversationId) {
+      setMessages([])
+      setReads([])
+      setThreadError(null)
+      setThreadStatus('ready')
       return
     }
 
-    setActiveConversationId(null)
-    backend
-      .ensureConversation(activeHomeId)
-      .then((conversationId) => {
-        if (cancelled) return
-        setActiveConversationId(conversationId)
-        void refreshSummaries()
-      })
-      .catch((ensureError: unknown) => {
-        if (cancelled) return
-        setThreadError(ensureError instanceof Error ? ensureError.message : fallbackMessage)
-        setThreadStatus('error')
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [backend, activeHomeId, refreshSummaries])
-
-  // Load the active thread and mark it read.
-  useEffect(() => {
-    if (!backend || !activeConversationId) return
     let cancelled = false
     setThreadStatus('loading')
     setThreadError(null)
@@ -229,11 +217,18 @@ export function useChatData(): ChatController {
 
   const sendMessage = useCallback(
     async (input: Omit<SendMessageInput, 'conversationId'>): Promise<boolean> => {
-      if (!backend || !activeConversationId) return false
+      if (!backend || !activeHomeId) return false
       setSending(true)
       setSendError(null)
+
       try {
-        const message = await backend.sendMessage({ ...input, conversationId: activeConversationId })
+        let conversationId = activeConversationId
+        if (!conversationId) {
+          conversationId = await backend.ensureConversation(activeHomeId)
+          setCreatedConversation({ homeId: activeHomeId, conversationId })
+        }
+
+        const message = await backend.sendMessage({ ...input, conversationId })
         setMessages((current) =>
           current.some((item) => item.id === message.id) ? current : [...current, message],
         )
@@ -246,7 +241,7 @@ export function useChatData(): ChatController {
         setSending(false)
       }
     },
-    [backend, activeConversationId, refreshSummaries],
+    [backend, activeHomeId, activeConversationId, refreshSummaries],
   )
 
   const retry = useCallback(() => {

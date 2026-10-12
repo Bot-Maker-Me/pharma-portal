@@ -23,7 +23,7 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-paper">
+    <div className="chat-shell flex h-dvh flex-col bg-paper">
       <header className="flex items-center gap-3 border-b border-line bg-surface px-4 py-3 sm:px-6">
         <Link
           href="/"

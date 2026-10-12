@@ -221,9 +221,11 @@ drop policy if exists conversations_read on public.conversations;
 create policy conversations_read on public.conversations
   for select to authenticated using (public.can_access_home(home_id));
 
+-- Anyone authorized for the home may open a thread with it — whether they are
+-- pharmacy staff (pharmacy_home_access) or the home itself (profiles.home_id).
 drop policy if exists conversations_insert on public.conversations;
 create policy conversations_insert on public.conversations
-  for insert to authenticated with check (public.pharmacy_has_home(home_id));
+  for insert to authenticated with check (public.can_access_home(home_id));
 
 drop policy if exists conversations_update on public.conversations;
 create policy conversations_update on public.conversations
