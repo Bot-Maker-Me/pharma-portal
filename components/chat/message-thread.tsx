@@ -5,7 +5,7 @@ import { ChevronLeft, Hash, ShieldCheck, TriangleAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDayLabel, formatFullTimestamp, formatMessageTime, isSameDay } from '@/lib/chat/format'
 import { urgencyMeta } from '@/lib/chat/urgency'
-import type { ChatMessage, ConversationRead, SendMessageInput } from '@/lib/chat/types'
+import type { ChatMessage, SendMessageInput } from '@/lib/chat/types'
 import { ChatErrorState, ChatLoadingState, ThreadStartState } from './chat-states'
 import { MessageComposer } from './message-composer'
 import type { ThreadStatus } from '@/lib/chat/use-chat'
@@ -13,8 +13,8 @@ import type { ThreadStatus } from '@/lib/chat/use-chat'
 type MessageThreadProps = {
   homeName: string
   conversationTitle: string | null
+  residentRef: string | null
   messages: ChatMessage[]
-  reads: ConversationRead[]
   selfUserId: string | null
   status: ThreadStatus
   error: string | null
@@ -29,8 +29,8 @@ type MessageThreadProps = {
 export function MessageThread({
   homeName,
   conversationTitle,
+  residentRef,
   messages,
-  reads,
   selfUserId,
   status,
   error,
@@ -47,13 +47,6 @@ export function MessageThread({
     const node = scrollRef.current
     if (node) node.scrollTop = node.scrollHeight
   }, [messages.length, status])
-
-  // The latest time the other side opened this thread — used for read receipts.
-  const othersReadAt = useMemo(() => {
-    return reads
-      .filter((read) => read.userId !== selfUserId)
-      .reduce<string | null>((latest, read) => (!latest || read.lastReadAt > latest ? read.lastReadAt : latest), null)
-  }, [reads, selfUserId])
 
   const groups = useMemo(() => {
     const result: { day: string; messages: ChatMessage[] }[] = []
@@ -88,9 +81,15 @@ export function MessageThread({
               </span>
             )}
           </div>
-          <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-ink-soft">
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-ink-soft">
             <ShieldCheck className="size-3.5 text-sage" aria-hidden="true" />
             Secure channel · shared with the Nursing Home portal
+            {residentRef && (
+              <span className="inline-flex items-center gap-1 rounded bg-paper-deep px-1.5 py-0.5 text-[10px] font-semibold">
+                <Hash className="size-3" aria-hidden="true" />
+                Resident {residentRef}
+              </span>
+            )}
           </p>
         </div>
         <span
@@ -121,7 +120,8 @@ export function MessageThread({
                 {group.messages.map((message) => {
                   const isMine = message.senderId === selfUserId
                   const meta = urgencyMeta[message.urgency]
-                  const isRead = Boolean(othersReadAt && othersReadAt >= message.createdAt)
+                  // Read receipts come straight from the message row (read_at).
+                  const isRead = Boolean(message.readAt)
                   const flagged = message.urgency !== 'routine'
                   return (
                     <div key={message.id} className={cn('chat-message flex', isMine ? 'justify-end' : 'justify-start')}>
@@ -151,17 +151,6 @@ export function MessageThread({
                             </span>
                           )}
                           <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.body}</p>
-                          {message.residentId && (
-                            <span
-                              className={cn(
-                                'mt-2 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold',
-                                isMine ? 'bg-white/15 text-white' : 'bg-sage/20 text-evergreen',
-                              )}
-                            >
-                              <Hash className="size-3" aria-hidden="true" />
-                              Resident {message.residentId}
-                            </span>
-                          )}
                           <div
                             className={cn(
                               'mt-1.5 flex items-center gap-2 text-[10px]',

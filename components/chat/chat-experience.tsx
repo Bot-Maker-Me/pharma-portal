@@ -16,6 +16,9 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
   const [pane, setPane] = useState<'list' | 'thread'>('list')
 
   const activeHome = chat.homes.find((home) => home.id === chat.activeHomeId) ?? null
+  // Threads created by the Nursing Home portal may not be linked to a home row
+  // yet, so fall back to the label the conversation itself carries.
+  const activeHomeName = chat.activeSummary?.homeName ?? activeHome?.name ?? null
 
   function handleSelectConversation(conversationId: string) {
     chat.selectConversation(conversationId)
@@ -93,12 +96,12 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
         </aside>
 
         <section className={cn('min-h-0 flex-col md:flex', pane === 'list' ? 'hidden' : 'flex')}>
-          {activeHome ? (
+          {activeHomeName ? (
             <MessageThread
-              homeName={activeHome.name}
+              homeName={activeHomeName}
               conversationTitle={chat.activeSummary?.title ?? null}
+              residentRef={chat.activeSummary?.residentRef ?? null}
               messages={chat.messages}
-              reads={chat.reads}
               selfUserId={chat.selfUserId}
               status={chat.threadStatus}
               error={chat.threadError}

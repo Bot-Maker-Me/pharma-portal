@@ -6,16 +6,17 @@ import type {
   ChatMessage,
   ChatSnapshot,
   ChatSubscriptionHandlers,
-  ConversationRead,
   ConversationSummary,
+  NewConversationInput,
   SendMessageInput,
   Urgency,
 } from './types'
 
 // Preview backend: used only when Supabase is not yet connected. It keeps the
-// same ChatBackend contract as the live backend so the UI is identical, and it
-// simulates the home side replying so realtime + read receipts are demonstrable.
-// Once NEXT_PUBLIC_SUPABASE_URL / ANON_KEY are set, this is never used.
+// same ChatBackend contract — a list of threads and their messages, with read
+// receipts on each message — so the UI is identical, and it simulates the home
+// side replying. Once NEXT_PUBLIC_SUPABASE_URL / ANON_KEY are set, this is never
+// used.
 
 const PHARMACY_USER_ID = 'preview-pharmacy-user'
 const HOME_USER_ID = 'preview-home-user'
@@ -25,17 +26,13 @@ const now = Date.now()
 const minutesAgo = (n: number) => new Date(now - n * 60 * 1000).toISOString()
 const hoursAgo = (n: number) => new Date(now - n * 60 * 60 * 1000).toISOString()
 
-type PreviewConversation = {
+type PreviewThread = {
   id: string
   homeId: string
   homeName: string
-  title: string | null
-  lastMessageBody: string | null
-  lastMessageSenderName: string | null
-  lastMessageAt: string
+  title: string
+  residentRef: string | null
 }
-
-type PreviewRead = { conversationId: string; userId: string; lastReadAt: string }
 
 const homes: AuthorizedHome[] = [
   { id: 'home-riverbend', name: 'Riverbend Care Centre' },
@@ -43,167 +40,148 @@ const homes: AuthorizedHome[] = [
   { id: 'home-maple', name: 'Maple Street Lodge' },
 ]
 
-const conversations: PreviewConversation[] = [
+const threads: PreviewThread[] = [
   {
     id: 'conv-riverbend',
     homeId: 'home-riverbend',
     homeName: 'Riverbend Care Centre',
     title: 'Medicine supply',
-    lastMessageBody: "Perfect — I'll flag it for the afternoon delivery run.",
-    lastMessageSenderName: 'Jordan Davis',
-    lastMessageAt: minutesAgo(24),
+    residentRef: 'R-3118',
   },
   {
     id: 'conv-riverbend-2',
     homeId: 'home-riverbend',
     homeName: 'Riverbend Care Centre',
     title: 'Blister packs',
-    lastMessageBody: 'Could you confirm the Tuesday cycle cut-off?',
-    lastMessageSenderName: 'Riverbend Care Centre',
-    lastMessageAt: hoursAgo(4),
+    residentRef: null,
   },
   {
     id: 'conv-harbour',
     homeId: 'home-harbour',
     homeName: 'Harbourview Nursing Home',
     title: 'Blister pack — R-5502',
-    lastMessageBody: 'Blister pack for R-5502 is ready for the Tuesday cycle.',
-    lastMessageSenderName: 'Harbourview Nursing Home',
-    lastMessageAt: hoursAgo(26),
+    residentRef: 'R-5502',
   },
 ]
 
 let messageSeq = 0
 const nextId = (prefix: string) => `${prefix}-${++messageSeq}`
 
-const messages: ChatMessage[] = [
-  {
+function message(
+  conversationId: string,
+  fromPharmacy: boolean,
+  body: string,
+  urgency: Urgency,
+  createdAt: string,
+  readAt: string | null = null,
+): ChatMessage {
+  return {
     id: nextId('m'),
-    conversationId: 'conv-riverbend',
-    senderId: HOME_USER_ID,
-    senderName: 'Riverbend Care Centre',
-    body: 'Morning — resident R-2041 has a new order for Apixaban 2.5mg BID. Can you confirm the preferred generic?',
-    urgency: 'routine',
-    residentId: 'R-2041',
-    createdAt: hoursAgo(3),
-  },
-  {
-    id: nextId('m'),
-    conversationId: 'conv-riverbend',
-    senderId: PHARMACY_USER_ID,
-    senderName: PHARMACY_NAME,
-    body: 'Confirmed. Preferred generic is Apixaban, DIN 02478123. The alternate is stocked if there is a supply gap.',
-    urgency: 'routine',
-    residentId: 'R-2041',
-    createdAt: hoursAgo(2),
-  },
-  {
-    id: nextId('m'),
-    conversationId: 'conv-riverbend',
-    senderId: HOME_USER_ID,
-    senderName: 'Riverbend Care Centre',
-    body: 'Thanks. R-3118 is also out of Rosuvastatin — is there an alternate we can dispense today?',
-    urgency: 'urgent',
-    residentId: 'R-3118',
-    createdAt: minutesAgo(38),
-  },
-  {
-    id: nextId('m'),
-    conversationId: 'conv-riverbend',
-    senderId: PHARMACY_USER_ID,
-    senderName: PHARMACY_NAME,
-    body: "Yes — Rosuvastatin 10mg alternate is on the shelf. I'll flag it for the afternoon delivery run.",
-    urgency: 'routine',
-    residentId: 'R-3118',
-    createdAt: minutesAgo(24),
-  },
-  {
-    id: nextId('m'),
-    conversationId: 'conv-riverbend-2',
-    senderId: HOME_USER_ID,
-    senderName: 'Riverbend Care Centre',
-    body: 'Could you confirm the Tuesday cycle cut-off?',
-    urgency: 'routine',
-    residentId: null,
-    createdAt: hoursAgo(4),
-  },
-  {
-    id: nextId('m'),
-    conversationId: 'conv-harbour',
-    senderId: HOME_USER_ID,
-    senderName: 'Harbourview Nursing Home',
-    body: 'Blister pack for R-5502 is ready for the Tuesday cycle.',
-    urgency: 'routine',
-    residentId: 'R-5502',
-    createdAt: hoursAgo(26),
-  },
-]
+    conversationId,
+    senderId: fromPharmacy ? PHARMACY_USER_ID : HOME_USER_ID,
+    senderName: fromPharmacy ? PHARMACY_NAME : threads.find((t) => t.id === conversationId)?.homeName ?? 'Nursing home',
+    body,
+    urgency,
+    readAt,
+    createdAt,
+  }
+}
 
-const reads: PreviewRead[] = [
-  { conversationId: 'conv-riverbend', userId: PHARMACY_USER_ID, lastReadAt: minutesAgo(20) },
-  { conversationId: 'conv-riverbend', userId: HOME_USER_ID, lastReadAt: minutesAgo(22) },
-  { conversationId: 'conv-harbour', userId: PHARMACY_USER_ID, lastReadAt: hoursAgo(25) },
+const messages: ChatMessage[] = [
+  message(
+    'conv-riverbend',
+    false,
+    'Morning — resident R-2041 has a new order for Apixaban 2.5mg BID. Can you confirm the preferred generic?',
+    'routine',
+    hoursAgo(3),
+    hoursAgo(2.5),
+  ),
+  message(
+    'conv-riverbend',
+    true,
+    'Confirmed. Preferred generic is Apixaban, DIN 02478123. The alternate is stocked if there is a supply gap.',
+    'routine',
+    hoursAgo(2),
+    hoursAgo(1.5),
+  ),
+  message(
+    'conv-riverbend',
+    false,
+    'Thanks. R-3118 is also out of Rosuvastatin — is there an alternate we can dispense today?',
+    'urgent',
+    minutesAgo(38),
+    null,
+  ),
+  message(
+    'conv-riverbend-2',
+    false,
+    'Could you confirm the Tuesday cycle cut-off?',
+    'routine',
+    hoursAgo(4),
+    null,
+  ),
+  message(
+    'conv-harbour',
+    false,
+    'Blister pack for R-5502 is ready for the Tuesday cycle.',
+    'routine',
+    hoursAgo(26),
+    hoursAgo(25),
+  ),
 ]
 
 const listeners = new Set<ChatSubscriptionHandlers>()
 
-function emitMessage(message: ChatMessage) {
-  listeners.forEach((listener) => listener.onMessage(message))
+function fromPharmacy(item: ChatMessage): boolean {
+  return item.senderId === PHARMACY_USER_ID
+}
+
+function emitMessage(item: ChatMessage) {
+  listeners.forEach((listener) => listener.onMessage(item))
 }
 
 function emitConversationChange() {
   listeners.forEach((listener) => listener.onConversationChange())
 }
 
-function emitRead(read: PreviewRead) {
-  listeners.forEach((listener) =>
-    listener.onReadChange({
-      conversationId: read.conversationId,
-      userId: read.userId,
-      lastReadAt: read.lastReadAt,
-    }),
-  )
+function pushMessage(item: ChatMessage) {
+  messages.push(item)
+  if (threads.some((thread) => thread.id === item.conversationId)) emitConversationChange()
+  emitMessage(item)
 }
 
-function pushMessage(message: ChatMessage) {
-  messages.push(message)
-  const conversation = conversations.find((item) => item.id === message.conversationId)
-  if (conversation) {
-    conversation.lastMessageBody = message.body
-    conversation.lastMessageSenderName = message.senderName
-    conversation.lastMessageAt = message.createdAt
-  }
-  emitMessage(message)
-  emitConversationChange()
-}
-
-function setRead(conversationId: string, userId: string, at: string) {
-  const existing = reads.find((read) => read.conversationId === conversationId && read.userId === userId)
-  if (existing) existing.lastReadAt = at
-  else reads.push({ conversationId, userId, lastReadAt: at })
-  emitRead({ conversationId, userId, lastReadAt: at })
+function markThreadRead(conversationId: string, readerIsPharmacy: boolean) {
+  const at = new Date().toISOString()
+  let changed = false
+  messages.forEach((item) => {
+    if (item.conversationId !== conversationId || item.readAt) return
+    // Only the messages written by the *other* side get a read receipt.
+    if (fromPharmacy(item) === readerIsPharmacy) return
+    item.readAt = at
+    changed = true
+  })
+  if (changed) emitConversationChange()
 }
 
 function summarize(): ConversationSummary[] {
-  return conversations
-    .map((conversation) => {
-      const myRead = reads.find(
-        (read) => read.conversationId === conversation.id && read.userId === PHARMACY_USER_ID,
-      )?.lastReadAt
-      const thread = messages.filter((message) => message.conversationId === conversation.id)
-      const unread = thread.filter(
-        (message) => message.senderId !== PHARMACY_USER_ID && (!myRead || message.createdAt > myRead),
-      )
+  return threads
+    .map((thread) => {
+      const threadMessages = messages
+        .filter((item) => item.conversationId === thread.id)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      const last = threadMessages[threadMessages.length - 1] ?? null
+      const unread = threadMessages.filter((item) => !fromPharmacy(item) && !item.readAt)
       return {
-        conversationId: conversation.id,
-        homeId: conversation.homeId,
-        homeName: conversation.homeName,
-        title: conversation.title,
-        lastMessageBody: conversation.lastMessageBody,
-        lastMessageSenderName: conversation.lastMessageSenderName,
-        lastMessageAt: conversation.lastMessageAt,
+        conversationId: thread.id,
+        homeId: thread.homeId,
+        homeName: thread.homeName,
+        title: thread.title,
+        residentRef: thread.residentRef,
+        lastMessageBody: last?.body ?? null,
+        lastMessageSenderName: last?.senderName ?? null,
+        lastMessageAt: last?.createdAt ?? new Date().toISOString(),
         unreadCount: unread.length,
-        hasUrgent: unread.some((message) => message.urgency === 'urgent' || message.urgency === 'emergency'),
+        hasUrgent: unread.some((item) => item.urgency !== 'routine'),
       }
     })
     .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))
@@ -226,73 +204,55 @@ export function createPreviewChatBackend(): ChatBackend {
 
     async loadMessages(conversationId: string): Promise<ChatMessage[]> {
       return messages
-        .filter((message) => message.conversationId === conversationId)
+        .filter((item) => item.conversationId === conversationId)
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     },
 
-    async loadReads(conversationId: string): Promise<ConversationRead[]> {
-      return reads
-        .filter((read) => read.conversationId === conversationId)
-        .map((read) => ({
-          conversationId: read.conversationId,
-          userId: read.userId,
-          lastReadAt: read.lastReadAt,
-        }))
-    },
-
-    async ensureConversation(homeId: string): Promise<string> {
-      const existing = conversations
-        .filter((conversation) => conversation.homeId === homeId)
-        .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))[0]
+    async ensureConversation(homeId: string, input: NewConversationInput): Promise<string> {
+      const existing = threads.filter((thread) => thread.homeId === homeId).pop()
       if (existing) return existing.id
       const home = homes.find((item) => item.id === homeId)
-      const conversation: PreviewConversation = {
+      const thread: PreviewThread = {
         id: nextId('conv'),
         homeId,
         homeName: home?.name ?? 'Nursing home',
-        title: null,
-        lastMessageBody: null,
-        lastMessageSenderName: null,
-        lastMessageAt: new Date().toISOString(),
+        title: input.subject,
+        residentRef: input.residentId,
       }
-      conversations.push(conversation)
+      threads.push(thread)
       emitConversationChange()
-      return conversation.id
+      return thread.id
     },
 
     async sendMessage(input: SendMessageInput): Promise<ChatMessage> {
-      const message: ChatMessage = {
-        id: nextId('m'),
-        conversationId: input.conversationId,
-        senderId: PHARMACY_USER_ID,
-        senderName: PHARMACY_NAME,
-        body: input.body,
-        urgency: input.urgency,
-        residentId: input.residentId,
-        createdAt: new Date().toISOString(),
-      }
-      pushMessage(message)
+      const item = message(
+        input.conversationId,
+        true,
+        input.body,
+        input.urgency,
+        new Date().toISOString(),
+      )
+      pushMessage(item)
 
       // The home side reads the message, then replies — mirroring live realtime.
-      window.setTimeout(() => setRead(input.conversationId, HOME_USER_ID, new Date().toISOString()), 900)
+      window.setTimeout(() => markThreadRead(input.conversationId, false), 900)
       window.setTimeout(() => {
-        pushMessage({
-          id: nextId('m'),
-          conversationId: input.conversationId,
-          senderId: HOME_USER_ID,
-          senderName: conversations.find((item) => item.id === input.conversationId)?.homeName ?? 'Nursing home',
-          body: homeReply(input.body, input.urgency, input.residentId),
-          urgency: 'routine',
-          residentId: input.residentId,
-          createdAt: new Date().toISOString(),
-        })
+        pushMessage(
+          message(
+            input.conversationId,
+            false,
+            homeReply(input.body, input.urgency, input.residentId),
+            'routine',
+            new Date().toISOString(),
+          ),
+        )
       }, 1800)
 
-      return message
+      return item
     },
 
     async markRead(conversationId: string): Promise<void> {
-      setRead(conversationId, PHARMACY_USER_ID, new Date().toISOString())
+      markThreadRead(conversationId, true)
     },
 
     subscribe(handlers: ChatSubscriptionHandlers): () => void {

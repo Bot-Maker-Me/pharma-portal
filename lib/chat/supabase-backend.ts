@@ -7,60 +7,49 @@ import type {
   ChatMessage,
   ChatSnapshot,
   ChatSubscriptionHandlers,
-  ConversationRead,
   ConversationSummary,
+  NewConversationInput,
   SendMessageInput,
   Urgency,
 } from './types'
 
-// The live backend reads and writes the shared Supabase tables that the Nursing
-// Home Portal also uses, so both portals see the same conversations in real time.
+// The live backend reads and writes the SAME rows the Nursing Home Portal uses:
+// public.chat_threads (one row per thread) and public.portal_messages (one row
+// per message). Those tables pre-date this app, so `subject` is the thread
+// title, `resident_ref` is the thread's resident identifier, and `sender_role`
+// ("home" | "pharmacy") says which side wrote a message.
 //
-// A "conversation" row is the unit of sharing: the Nursing Home portal can hold
-// several threads for one home (each with a title). This backend therefore lists
-// conversations — not homes — so the pharmacy always replies inside the exact
-// thread the home is reading. Replies are only ever written to an existing
-// thread; a new one is created solely when the home has none at all.
+// Uses only plain table reads/writes — no RPCs — so it needs nothing beyond
+// SELECT/INSERT/UPDATE privileges plus row level security.
 //
-// Deliberately uses only plain table reads (no database functions/RPCs) so it
-// depends on nothing beyond SELECT/INSERT privileges + RLS.
+// See supabase/migrations/*_share_chat_with_nursing_home_portal.sql for the
+// grants, policies, realtime publication and the home_id backfill.
 
-type MessageRow = {
-  id: string
-  conversation_id: string
-  sender_id: string
-  sender_name: string
-  body: string
-  urgency: string
-  resident_id: string | null
-  created_at: string
-}
+const SENDER_ROLE_PHARMACY = 'pharmacy'
+const SENDER_ROLE_HOME = 'home'
 
-type ConversationRow = {
+type ThreadRow = {
   id: string
   home_id: string | null
-  title: string | null
-  last_message_body: string | null
-  last_message_sender_name: string | null
-  last_message_at: string | null
+  pharmacy_id: string | null
+  resident_ref: string | null
+  subject: string | null
+  urgent: boolean | null
+  created_by: string | null
   created_at: string
+  last_message_at: string | null
 }
 
-type HomeConversationRow = ConversationRow & { home_id: string }
-
-type SummaryMessageRow = {
-  conversation_id: string
-  sender_id: string
+type PortalMessageRow = {
+  id: string
+  user_id: string
+  thread_id: string | null
+  sender_role: string
   sender_name: string
   body: string
-  urgency: string
+  urgent: boolean | null
+  read_at: string | null
   created_at: string
-}
-
-type ReadRow = {
-  conversation_id: string
-  user_id: string
-  last_read_at: string
 }
 
 type PostgrestLikeError = {
@@ -71,11 +60,11 @@ type PostgrestLikeError = {
 }
 
 // How far back we look when computing previews and unread counts.
-const SUMMARY_WINDOW_DAYS = 30
 const SUMMARY_MESSAGE_LIMIT = 5000
+const THREAD_MESSAGE_LIMIT = 1000
 
-function normalizeUrgency(value: string): Urgency {
-  return value === 'urgent' || value === 'emergency' ? value : 'routine'
+function toUrgency(urgent: boolean | null): Urgency {
+  return urgent ? 'urgent' : 'routine'
 }
 
 /** Turns a Supabase/PostgREST error into a real Error so the UI can show why it failed. */
@@ -87,16 +76,39 @@ function toChatError(error: unknown): Error {
   return new Error('Unable to reach the messaging service.')
 }
 
-function mapMessage(row: MessageRow): ChatMessage {
+function newId(): string {
+  return crypto.randomUUID()
+}
+
+function mapMessage(row: PortalMessageRow): ChatMessage {
   return {
     id: row.id,
-    conversationId: row.conversation_id,
-    senderId: row.sender_id,
+    conversationId: row.thread_id ?? '',
+    senderId: row.user_id,
     senderName: row.sender_name,
     body: row.body,
-    urgency: normalizeUrgency(row.urgency),
-    residentId: row.resident_id,
+    urgency: toUrgency(row.urgent),
+    readAt: row.read_at,
     createdAt: row.created_at,
+  }
+}
+
+function mapThread(row: ThreadRow, homeName: string, messages: PortalMessageRow[]): ConversationSummary {
+  const thread = [...messages].sort((a, b) => a.created_at.localeCompare(b.created_at))
+  const last = thread[thread.length - 1] ?? null
+  const unread = thread.filter((message) => message.sender_role === SENDER_ROLE_HOME && !message.read_at)
+
+  return {
+    conversationId: row.id,
+    homeId: row.home_id ?? '',
+    homeName,
+    title: row.subject?.trim() || null,
+    residentRef: row.resident_ref?.trim() || null,
+    lastMessageBody: last?.body ?? null,
+    lastMessageSenderName: last?.sender_name ?? null,
+    lastMessageAt: last?.created_at ?? row.last_message_at ?? row.created_at,
+    unreadCount: unread.length,
+    hasUrgent: unread.some((message) => message.urgent === true),
   }
 }
 
@@ -111,72 +123,38 @@ export function createSupabaseChatBackend(): ChatBackend {
       const { data: userData } = await supabase.auth.getUser()
       const selfUserId = userData.user?.id ?? null
 
-      const [homesResult, conversationsResult] = await Promise.all([
+      const [homesResult, threadsResult, messagesResult] = await Promise.all([
         supabase.from('homes').select('id, name').order('name', { ascending: true }),
         supabase
-          .from('conversations')
-          .select('id, home_id, title, last_message_body, last_message_sender_name, last_message_at, created_at'),
-      ])
-      if (homesResult.error) throw toChatError(homesResult.error)
-      if (conversationsResult.error) throw toChatError(conversationsResult.error)
-
-      const homes: AuthorizedHome[] = (homesResult.data ?? []).map((home) => ({
-        id: home.id,
-        name: home.name,
-      }))
-      const homeNames = new Map(homes.map((home) => [home.id, home.name]))
-
-      // Keep every thread that is attached to a home this user is authorized for.
-      const conversations = ((conversationsResult.data ?? []) as ConversationRow[]).filter(
-        (conversation): conversation is HomeConversationRow =>
-          conversation.home_id !== null && homeNames.has(conversation.home_id),
-      )
-      if (!selfUserId || conversations.length === 0) {
-        return { selfUserId, homes, conversations: [] }
-      }
-
-      const since = new Date(Date.now() - SUMMARY_WINDOW_DAYS * 86_400_000).toISOString()
-      const [readsResult, messagesResult] = await Promise.all([
-        supabase.from('conversation_reads').select('conversation_id, last_read_at').eq('user_id', selfUserId),
+          .from('chat_threads')
+          .select('id, home_id, pharmacy_id, resident_ref, subject, urgent, created_by, created_at, last_message_at')
+          .order('last_message_at', { ascending: false }),
         supabase
-          .from('messages')
-          .select('conversation_id, sender_id, sender_name, body, urgency, created_at')
-          .gte('created_at', since)
+          .from('portal_messages')
+          .select('id, user_id, thread_id, sender_role, sender_name, body, urgent, read_at, created_at')
           .order('created_at', { ascending: false })
           .limit(SUMMARY_MESSAGE_LIMIT),
       ])
-      if (readsResult.error) throw toChatError(readsResult.error)
+      if (homesResult.error) throw toChatError(homesResult.error)
+      if (threadsResult.error) throw toChatError(threadsResult.error)
       if (messagesResult.error) throw toChatError(messagesResult.error)
 
-      const lastReadByConversation = new Map<string, string>()
-      ;(readsResult.data ?? []).forEach((row) =>
-        lastReadByConversation.set(row.conversation_id, row.last_read_at),
-      )
+      const homes: AuthorizedHome[] = (homesResult.data ?? []).map((home) => ({ id: home.id, name: home.name }))
+      const homeNames = new Map(homes.map((home) => [home.id, home.name]))
 
-      const recent = (messagesResult.data ?? []) as SummaryMessageRow[]
+      const messages = (messagesResult.data ?? []) as PortalMessageRow[]
+      const messagesByThread = new Map<string, PortalMessageRow[]>()
+      messages.forEach((message) => {
+        if (!message.thread_id) return
+        const bucket = messagesByThread.get(message.thread_id)
+        if (bucket) bucket.push(message)
+        else messagesByThread.set(message.thread_id, [message])
+      })
 
-      const summaries: ConversationSummary[] = conversations
-        .map((conversation) => {
-          const thread = recent
-            .filter((message) => message.conversation_id === conversation.id)
-            .sort((a, b) => a.created_at.localeCompare(b.created_at))
-          const last = thread[thread.length - 1] ?? null
-          const lastReadAt = lastReadByConversation.get(conversation.id)
-          const unread = thread.filter(
-            (message) => message.sender_id !== selfUserId && (!lastReadAt || message.created_at > lastReadAt),
-          )
-
-          return {
-            conversationId: conversation.id,
-            homeId: conversation.home_id,
-            homeName: homeNames.get(conversation.home_id) ?? 'Nursing home',
-            title: conversation.title?.trim() || null,
-            lastMessageBody: last?.body ?? conversation.last_message_body,
-            lastMessageSenderName: last?.sender_name ?? conversation.last_message_sender_name,
-            lastMessageAt: last?.created_at ?? conversation.last_message_at ?? conversation.created_at,
-            unreadCount: unread.length,
-            hasUrgent: unread.some((message) => normalizeUrgency(message.urgency) !== 'routine'),
-          }
+      const summaries: ConversationSummary[] = ((threadsResult.data ?? []) as ThreadRow[])
+        .map((thread) => {
+          const homeName = thread.home_id ? homeNames.get(thread.home_id) ?? 'Nursing home' : 'Nursing home'
+          return mapThread(thread, homeName, messagesByThread.get(thread.id) ?? [])
         })
         .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))
 
@@ -185,110 +163,110 @@ export function createSupabaseChatBackend(): ChatBackend {
 
     async loadMessages(conversationId: string): Promise<ChatMessage[]> {
       const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
+        .from('portal_messages')
+        .select('id, user_id, thread_id, sender_role, sender_name, body, urgent, read_at, created_at')
+        .eq('thread_id', conversationId)
         .order('created_at', { ascending: true })
+        .limit(THREAD_MESSAGE_LIMIT)
       if (error) throw toChatError(error)
-      return ((data ?? []) as MessageRow[]).map(mapMessage)
+      return ((data ?? []) as PortalMessageRow[]).map(mapMessage)
     },
 
-    async loadReads(conversationId: string): Promise<ConversationRead[]> {
-      const { data, error } = await supabase
-        .from('conversation_reads')
-        .select('conversation_id, user_id, last_read_at')
-        .eq('conversation_id', conversationId)
-      if (error) throw toChatError(error)
-      return ((data ?? []) as ReadRow[]).map((row) => ({
-        conversationId: row.conversation_id,
-        userId: row.user_id,
-        lastReadAt: row.last_read_at,
-      }))
-    },
-
-    async ensureConversation(homeId: string): Promise<string> {
-      // Reuse the home's most recently active thread. Creating a second thread for
-      // a home that already has one is what makes the two portals talk past each
-      // other, so this only inserts when there is genuinely nothing to reuse.
+    async ensureConversation(homeId: string, input: NewConversationInput): Promise<string> {
+      // Reuse the home's most recent thread. Creating a second thread for a home
+      // that already has one is what makes the two portals talk past each other,
+      // so this only inserts when there is nothing to reuse.
       const { data: existing, error: existingError } = await supabase
-        .from('conversations')
+        .from('chat_threads')
         .select('id')
         .eq('home_id', homeId)
         .order('last_message_at', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
       if (existingError) throw toChatError(existingError)
       if (existing?.id) return existing.id
 
-      const { data: created, error: createError } = await supabase
-        .from('conversations')
-        .insert({ home_id: homeId })
+      const { data: userData } = await supabase.auth.getUser()
+      const createdBy = userData.user?.id
+      if (!createdBy) throw new Error('Your session has expired. Please sign in again.')
+
+      const now = new Date().toISOString()
+      const { data, error } = await supabase
+        .from('chat_threads')
+        .insert({
+          id: newId(),
+          home_id: homeId,
+          resident_ref: input.residentId?.trim() ?? '',
+          subject: input.subject,
+          urgent: input.urgent,
+          created_by: createdBy,
+          created_at: now,
+          last_message_at: now,
+        })
         .select('id')
         .single()
-      if (createError) throw toChatError(createError)
-      return created.id
+      if (error) throw toChatError(error)
+      return data.id
     },
 
     async sendMessage(input: SendMessageInput): Promise<ChatMessage> {
       const { data: userData } = await supabase.auth.getUser()
-      const senderId = userData.user?.id
-      if (!senderId) throw new Error('Your session has expired. Please sign in again.')
+      const userId = userData.user?.id
+      if (!userId) throw new Error('Your session has expired. Please sign in again.')
 
       const { data: profile } = await supabase
         .from('profiles')
         .select('full_name')
-        .eq('id', senderId)
+        .eq('id', userId)
         .maybeSingle()
       const senderName =
         profile?.full_name?.trim() || userData.user?.email?.split('@')[0] || 'Pharmacy team'
 
+      const now = new Date().toISOString()
+      const urgent = input.urgency !== 'routine'
       const { data, error } = await supabase
-        .from('messages')
+        .from('portal_messages')
         .insert({
-          conversation_id: input.conversationId,
-          sender_id: senderId,
+          id: newId(),
+          thread_id: input.conversationId,
+          user_id: userId,
+          sender_role: SENDER_ROLE_PHARMACY,
           sender_name: senderName,
           body: input.body,
-          urgency: input.urgency,
-          resident_id: input.residentId,
+          urgent,
+          created_at: now,
         })
-        .select('*')
+        .select('id, user_id, thread_id, sender_role, sender_name, body, urgent, read_at, created_at')
         .single()
       if (error) throw toChatError(error)
-      return mapMessage(data as MessageRow)
+
+      // Keep the thread's ordering/preview in step for the Nursing Home portal.
+      await supabase.from('chat_threads').update({ last_message_at: now }).eq('id', input.conversationId)
+
+      return mapMessage(data as PortalMessageRow)
     },
 
     async markRead(conversationId: string): Promise<void> {
-      const { data: userData } = await supabase.auth.getUser()
-      const userId = userData.user?.id
-      if (!userId) return
+      // Read state lives on the message: stamp the home's messages as read.
       await supabase
-        .from('conversation_reads')
-        .upsert(
-          { conversation_id: conversationId, user_id: userId, last_read_at: new Date().toISOString() },
-          { onConflict: 'conversation_id,user_id' },
-        )
+        .from('portal_messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('thread_id', conversationId)
+        .eq('sender_role', SENDER_ROLE_HOME)
+        .is('read_at', null)
     },
 
     subscribe(handlers: ChatSubscriptionHandlers): () => void {
       const channel = supabase
         .channel('chat-with-home')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-          handlers.onMessage(mapMessage(payload.new as MessageRow))
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'portal_messages' }, (payload) => {
+          handlers.onMessage(mapMessage(payload.new as PortalMessageRow))
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_threads' }, () => {
           handlers.onConversationChange()
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_reads' }, (payload) => {
-          const row = payload.new as ReadRow | undefined
-          if (row?.user_id) {
-            handlers.onReadChange({
-              conversationId: row.conversation_id,
-              userId: row.user_id,
-              lastReadAt: row.last_read_at,
-            })
-          }
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'portal_messages' }, () => {
+          handlers.onConversationChange()
         })
         .subscribe()
 

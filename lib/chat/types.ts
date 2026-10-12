@@ -1,6 +1,13 @@
-// Shared chat domain types. These mirror the columns in the shared Supabase
-// schema (see supabase/migrations/20261001000000_chat_with_home.sql) so the
-// Nursing Home Portal and the Pharma Portal speak the exact same language.
+// Shared chat domain types.
+//
+// These mirror the columns the Nursing Home portal already stores its messaging
+// in — public.chat_threads and public.portal_messages — so both portals read and
+// write one shared mailbox:
+//
+//   chat_threads    id, home_id, pharmacy_id, resident_ref, subject, urgent,
+//                   created_by, created_at, last_message_at
+//   portal_messages id, user_id, thread_id, sender_role, sender_name, body,
+//                   urgent, read_at, created_at
 
 export type Urgency = 'routine' | 'urgent' | 'emergency'
 
@@ -22,8 +29,10 @@ export type ConversationSummary = {
   conversationId: string
   homeId: string
   homeName: string
-  /** Optional thread label set by the Nursing Home portal (e.g. "Medicine supply"). */
+  /** The thread's subject line, set by whichever portal started it. */
   title: string | null
+  /** Resident identifier for the whole thread (chat_threads.resident_ref). */
+  residentRef: string | null
   lastMessageBody: string | null
   lastMessageSenderName: string | null
   lastMessageAt: string
@@ -38,14 +47,9 @@ export type ChatMessage = {
   senderName: string
   body: string
   urgency: Urgency
-  residentId: string | null
+  /** When the other side opened the message (portal_messages.read_at). */
+  readAt: string | null
   createdAt: string
-}
-
-export type ConversationRead = {
-  conversationId: string
-  userId: string
-  lastReadAt: string
 }
 
 export type SendMessageInput = {
@@ -53,6 +57,13 @@ export type SendMessageInput = {
   body: string
   urgency: Urgency
   residentId: string | null
+}
+
+/** Everything needed to create a thread — chat_threads requires a subject. */
+export type NewConversationInput = {
+  subject: string
+  residentId: string | null
+  urgent: boolean
 }
 
 export type ChatSnapshot = {
@@ -65,20 +76,18 @@ export type ChatSnapshot = {
 export type ChatSubscriptionHandlers = {
   onMessage: (message: ChatMessage) => void
   onConversationChange: () => void
-  onReadChange: (read: ConversationRead) => void
 }
 
 /**
- * The contract every chat backend implements. The live backend talks to Supabase
- * (shared with the Nursing Home Portal); the preview backend runs on sample data
- * so the interface is still explorable before Supabase is connected.
+ * The contract every chat backend implements. The live backend talks to the
+ * tables shared with the Nursing Home Portal; the preview backend runs on sample
+ * data so the interface is still explorable before Supabase is connected.
  */
 export interface ChatBackend {
   mode: 'live' | 'preview'
   load(): Promise<ChatSnapshot>
   loadMessages(conversationId: string): Promise<ChatMessage[]>
-  loadReads(conversationId: string): Promise<ConversationRead[]>
-  ensureConversation(homeId: string): Promise<string>
+  ensureConversation(homeId: string, input: NewConversationInput): Promise<string>
   sendMessage(input: SendMessageInput): Promise<ChatMessage>
   markRead(conversationId: string): Promise<void>
   subscribe(handlers: ChatSubscriptionHandlers): () => void

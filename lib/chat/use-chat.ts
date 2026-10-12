@@ -6,7 +6,6 @@ import type {
   AuthorizedHome,
   ChatBackend,
   ChatMessage,
-  ConversationRead,
   ConversationSummary,
   SendMessageInput,
 } from './types'
@@ -24,7 +23,6 @@ export type ChatController = {
   activeHomeId: string | null
   activeSummary: ConversationSummary | null
   messages: ChatMessage[]
-  reads: ConversationRead[]
   threadStatus: ThreadStatus
   threadError: string | null
   sending: boolean
@@ -59,7 +57,6 @@ export function useChatData(): ChatController {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
   const [activeHomeId, setActiveHomeId] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [reads, setReads] = useState<ConversationRead[]>([])
   const [threadStatus, setThreadStatus] = useState<ThreadStatus>('idle')
   const [threadError, setThreadError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
@@ -148,7 +145,6 @@ export function useChatData(): ChatController {
 
     if (!activeConversationId) {
       setMessages([])
-      setReads([])
       setThreadError(null)
       setThreadStatus('ready')
       return
@@ -158,11 +154,11 @@ export function useChatData(): ChatController {
     setThreadStatus('loading')
     setThreadError(null)
 
-    Promise.all([backend.loadMessages(activeConversationId), backend.loadReads(activeConversationId)])
-      .then(([thread, threadReads]) => {
+    backend
+      .loadMessages(activeConversationId)
+      .then((thread) => {
         if (cancelled) return
         setMessages(thread)
-        setReads(threadReads)
         setThreadStatus('ready')
         void backend.markRead(activeConversationId).then(refreshSummaries).catch(() => undefined)
       })
@@ -194,10 +190,6 @@ export function useChatData(): ChatController {
       },
       onConversationChange: () => {
         scheduleRefresh()
-      },
-      onReadChange: (read) => {
-        if (read.conversationId !== activeConversationRef.current) return
-        setReads((current) => [...current.filter((item) => item.userId !== read.userId), read])
       },
     })
   }, [backend, refreshSummaries, scheduleRefresh])
@@ -238,14 +230,21 @@ export function useChatData(): ChatController {
 
   const sendMessage = useCallback(
     async (input: Omit<SendMessageInput, 'conversationId'>): Promise<boolean> => {
-      if (!backend || !activeHomeId) return false
+      // Either an existing thread is open, or a home is selected to start one.
+      if (!backend || (!activeConversationId && !activeHomeId)) return false
       setSending(true)
       setSendError(null)
 
       try {
         let conversationId = activeConversationId
         if (!conversationId) {
-          conversationId = await backend.ensureConversation(activeHomeId)
+          if (!activeHomeId) return false
+          // chat_threads requires a subject — the opening line doubles as it.
+          conversationId = await backend.ensureConversation(activeHomeId, {
+            subject: input.body.slice(0, 80),
+            residentId: input.residentId,
+            urgent: input.urgency !== 'routine',
+          })
           setActiveConversationId(conversationId)
         }
 
@@ -281,7 +280,6 @@ export function useChatData(): ChatController {
     activeHomeId,
     activeSummary,
     messages,
-    reads,
     threadStatus,
     threadError,
     sending,
