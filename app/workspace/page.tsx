@@ -5,7 +5,9 @@ import { ShieldCheck, Wrench } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getSessionTenant } from '@/lib/features/server'
 import { loadWorkspaceData } from '@/lib/workspace/data'
+import { previewWorkspace } from '@/lib/workspace/preview'
 import { loadTenantIdentity } from '@/lib/tenant/server'
+import { previewTenant } from '@/lib/tenant/preview'
 import { WorkspaceView } from '@/components/workspace/workspace-view'
 
 export const dynamic = 'force-dynamic'
@@ -21,44 +23,17 @@ export default async function WorkspacePage() {
   // Supabase client!" from inside the Supabase SDK.
   const configured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
   if (!configured) {
+    // No credentials yet: open the sample workspace of the preview pharmacy —
+    // Pharmasave West Hills — wearing its own theme, rather than a dead end.
     return (
-      <main className="ws-shell flex min-h-dvh flex-col items-center justify-center gap-4 bg-paper px-6 text-center">
-        <span className="flex size-11 items-center justify-center rounded-full bg-sage/20 text-evergreen">
-          <Wrench className="size-5" aria-hidden="true" />
-        </span>
-        <div>
-          <h1 className="ws-title">Connect Supabase to open the workspace</h1>
-          <p className="ws-subtitle">
-            This environment has no Supabase credentials, so there is no account to sign in to yet.
-          </p>
-        </div>
-        <div className="w-full max-w-md border border-line bg-surface px-4 py-3 text-left">
-          <p className="text-xs font-semibold text-ink">
-            Add both variables, then restart the app.
-          </p>
-          <p className="mt-1 text-[11px] text-ink-soft">
-            In <code className="rounded bg-paper-deep px-1">.env.local</code> for this preview, and in Vercel →
-            Settings → Environment Variables for the deployed site:
-          </p>
-          <pre className="mt-2 whitespace-pre-wrap font-mono text-[11px] text-evergreen">
-            {'NEXT_PUBLIC_SUPABASE_URL=…\nNEXT_PUBLIC_SUPABASE_ANON_KEY=…'}
-          </pre>
-        </div>
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <Link
-            href="/chat"
-            className="inline-flex items-center gap-1.5 rounded-md bg-evergreen px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-evergreen/90"
-          >
-            See Chat with Home in preview mode
-          </Link>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface px-4 py-2.5 text-xs font-semibold text-ink-soft transition hover:bg-paper-deep"
-          >
-            Back to the home page
-          </Link>
-        </div>
-      </main>
+      <WorkspaceView
+        tenantName={previewTenant.name ?? 'Your pharmacy'}
+        theme={previewTenant.theme}
+        userEmail="preview@formulary.local"
+        isPlatformAdmin={false}
+        data={previewWorkspace}
+        preview
+      />
     )
   }
 

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getSessionTenant } from '@/lib/features/server'
 import { loadTenantIdentity } from '@/lib/tenant/server'
+import { previewTenant } from '@/lib/tenant/preview'
 import { defaultTenantTheme } from '@/lib/tenant/theme'
 import { ChatExperience } from '@/components/chat/chat-experience'
 import type { ChatIdentity } from '@/lib/chat/types'
@@ -22,8 +23,10 @@ export default async function ChatPage() {
     signedIn: false,
     userId: null,
     displayName: 'Pharmacy team',
-    organization: null,
-    theme: defaultTenantTheme,
+    // Without credentials the app runs as the preview pharmacy, so the sample
+    // mailbox is clearly labelled and wears that pharmacy's theme.
+    organization: configured ? null : previewTenant.name,
+    theme: configured ? defaultTenantTheme : previewTenant.theme,
   }
 
   if (configured) {

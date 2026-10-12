@@ -13,6 +13,12 @@ export type TenantTheme = {
   label: string
 }
 
+/** One pharmacy as the app needs it: what to call it, and how to brand it. */
+export type TenantIdentity = {
+  name: string | null
+  theme: TenantTheme
+}
+
 export const tenantThemes: TenantTheme[] = [
   { key: 'default', label: 'Default (Formulary)' },
   { key: 'pharmasave', label: 'Pharmasave' },

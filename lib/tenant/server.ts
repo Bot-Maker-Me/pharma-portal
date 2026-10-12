@@ -1,12 +1,9 @@
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
-import { parseTenantTheme, type TenantTheme } from './theme'
+import { parseTenantTheme, type TenantIdentity } from './theme'
 
-export type TenantIdentity = {
-  name: string | null
-  theme: TenantTheme
-}
+export type { TenantIdentity }
 
 /**
  * Reads a tenant's display name and its branded theme.

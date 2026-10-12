@@ -47,6 +47,11 @@ palette in the workspace, Chat with Home and the admin console — and no other 
 is affected. Set it in Admin console → Pharmacies, or seed it in one go with
 `supabase/add-pharmasave-west-hills.sql`.
 
+Without Supabase credentials the app runs as the preview pharmacy — **Pharmasave West
+Hills** (`lib/tenant/preview.ts`), with its sample workspace in
+`lib/workspace/preview.ts` — so `/workspace` and `/chat` open as that branded pharmacy
+instead of an empty setup screen. Live mode always reads the real tenant row instead.
+
 ## Access model
 
 - A **pharmacy user** sees a home only if a `pharmacy_home_access` row exists for them.

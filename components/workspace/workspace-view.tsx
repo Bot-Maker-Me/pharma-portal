@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Inbox, LayoutList, MessagesSquare, Search, ShieldCheck, Table2 } from 'lucide-react'
+import { Inbox, Info, LayoutList, MessagesSquare, Search, ShieldCheck, Table2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { workspaceSections } from '@/lib/workspace/sections'
 import { tenantThemeClass, type TenantTheme } from '@/lib/tenant/theme'
@@ -15,9 +15,11 @@ type WorkspaceViewProps = {
   userEmail: string
   isPlatformAdmin: boolean
   data: WorkspaceData
+  /** True when this is the sample workspace shown before Supabase is connected. */
+  preview?: boolean
 }
 
-export function WorkspaceView({ tenantName, theme, userEmail, isPlatformAdmin, data }: WorkspaceViewProps) {
+export function WorkspaceView({ tenantName, theme, userEmail, isPlatformAdmin, data, preview }: WorkspaceViewProps) {
   const [section, setSection] = useState<string>('formulary')
   const [query, setQuery] = useState('')
 
@@ -65,6 +67,19 @@ export function WorkspaceView({ tenantName, theme, userEmail, isPlatformAdmin, d
           )}
         </div>
       </header>
+
+      {preview && (
+        <div className="flex items-start gap-2 border-b border-line bg-sage/10 px-4 py-2.5 text-[11px] text-ink-soft sm:px-6">
+          <Info className="mt-0.5 size-3.5 shrink-0 text-evergreen" aria-hidden="true" />
+          <p>
+            <strong className="font-semibold text-ink">Sample workspace for {tenantName}.</strong> This is the preview
+            pharmacy, shown until Supabase is connected. Add{' '}
+            <code className="rounded bg-paper-deep px-1">NEXT_PUBLIC_SUPABASE_URL</code> and{' '}
+            <code className="rounded bg-paper-deep px-1">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> — then sign in to load the
+            real pharmacy and its live content.
+          </p>
+        </div>
+      )}
 
       <div className="grid min-h-0 flex-1 md:grid-cols-[15rem_1fr]">
         <aside className="min-h-0 border-line md:border-r">

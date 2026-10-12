@@ -68,8 +68,9 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
         <div className="flex items-start gap-2 border-b border-line bg-sage/10 px-4 py-2.5 text-[11px] text-ink-soft sm:px-6">
           <Info className="mt-0.5 size-3.5 shrink-0 text-evergreen" aria-hidden="true" />
           <p>
-            <strong className="font-semibold text-ink">Preview mode.</strong> Sample data is shown until Supabase is
-            connected. Add <code className="rounded bg-paper-deep px-1">NEXT_PUBLIC_SUPABASE_URL</code> and{' '}
+            <strong className="font-semibold text-ink">Preview mode.</strong> Sample data for{' '}
+            {identity.organization ?? 'this pharmacy'} is shown until Supabase is connected. Add{' '}
+            <code className="rounded bg-paper-deep px-1">NEXT_PUBLIC_SUPABASE_URL</code> and{' '}
             <code className="rounded bg-paper-deep px-1">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> to sync live with the
             Nursing Home portal.
           </p>
