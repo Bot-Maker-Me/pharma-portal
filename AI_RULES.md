@@ -24,3 +24,4 @@
 - Database changes go in `supabase/migrations/` as SQL migrations with RLS policies enabled.
 - `next.config.mjs` ignores TypeScript build errors, so keep the code type-clean yourself and verify with type checks.
 - When adding a new workspace feature, wire it into both `lib/features/registry.ts` and the sidebar so it is reachable.
+- Per-pharmacy branding: `tenants.theme` stores a key that `lib/tenant/theme.ts` resolves to `<key>` classes; the token overrides live in `app/globals.css` (`.theme-pharmasave`). A theme must stay scoped to the pharmacy that carries it.

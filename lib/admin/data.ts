@@ -1,6 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
+import type { TenantThemeKey } from '@/lib/tenant/theme'
 import type { WorkspaceSectionKey } from '@/lib/workspace/sections'
 
 // Data access for the admin console. Everything here is protected by RLS: only
@@ -21,7 +22,8 @@ export type AdminUser = {
 }
 
 export type AdminHome = { id: string; name: string }
-export type AdminTenant = { id: string; name: string; plan: string }
+/** One pharmacy workspace. `theme` is the tenants.theme key that brands it. */
+export type AdminTenant = { id: string; name: string; plan: string; theme: string }
 
 export type ContentItem = {
   id: string
@@ -84,13 +86,25 @@ export async function loadHomes(): Promise<AdminHome[]> {
 }
 
 export async function loadTenants(): Promise<AdminTenant[]> {
-  const { data, error } = await db().from('tenants').select('id, name, plan').order('name')
-  if (error) fail(error)
-  return (data ?? []) as AdminTenant[]
+  const client = db()
+  const themed = await client.from('tenants').select('id, name, plan, theme').order('name')
+  if (!themed.error) return (themed.data ?? []) as AdminTenant[]
+
+  // `tenants.theme` arrives with 20261020000000_tenant_theme_and_chat_archive.sql;
+  // until it is applied the console still lists the pharmacies.
+  const plain = await client.from('tenants').select('id, name, plan').order('name')
+  if (plain.error) fail(plain.error)
+  return ((plain.data ?? []) as Omit<AdminTenant, 'theme'>[]).map((row) => ({ ...row, theme: 'default' }))
 }
 
-export async function createTenant(name: string): Promise<void> {
-  const { error } = await db().from('tenants').insert({ name })
+export async function createTenant(name: string, theme: TenantThemeKey): Promise<void> {
+  const { error } = await db().from('tenants').insert({ name, theme })
+  if (error) fail(error)
+}
+
+/** Brands a pharmacy. Only that tenant's screens pick the theme up. */
+export async function setTenantTheme(tenantId: string, theme: TenantThemeKey): Promise<void> {
+  const { error } = await db().from('tenants').update({ theme }).eq('id', tenantId)
   if (error) fail(error)
 }
 

@@ -1,7 +1,17 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Building2, MessageSquarePlus, Search, TriangleAlert } from 'lucide-react'
+import {
+  Archive,
+  ArchiveRestore,
+  Building2,
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  MessageSquarePlus,
+  Search,
+  TriangleAlert,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatConversationTime, initialsFromName } from '@/lib/chat/format'
 import type { AuthorizedHome, ConversationSummary } from '@/lib/chat/types'
@@ -15,6 +25,9 @@ type ConversationListProps = {
   activeHomeId: string | null
   onSelectConversation: (conversationId: string) => void
   onStartConversation: (homeId: string) => void
+  onSetArchived: (conversationId: string, archived: boolean) => void
+  archivingId: string | null
+  archiveError: string | null
   status: LoadStatus
   error: string | null
   onRetry: () => void
@@ -26,6 +39,101 @@ function previewText(summary: ConversationSummary): string {
   return sender ? `${sender}: ${summary.lastMessageBody}` : summary.lastMessageBody
 }
 
+function ThreadRow({
+  summary,
+  isActive,
+  archived,
+  busy,
+  onSelect,
+  onSetArchived,
+}: {
+  summary: ConversationSummary
+  isActive: boolean
+  archived: boolean
+  busy: boolean
+  onSelect: () => void
+  onSetArchived: (archived: boolean) => void
+}) {
+  const hasUnread = summary.unreadCount > 0
+  const action = archived ? 'Restore' : 'Archive'
+  const actionLabel = `${action} conversation with ${summary.homeName}`
+
+  return (
+    <li className="flex items-stretch border-b border-line/70">
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-current={isActive ? 'true' : undefined}
+        className={cn(
+          'flex min-w-0 flex-1 items-start gap-3 px-4 py-3.5 text-left transition',
+          isActive ? 'bg-sage/15' : 'hover:bg-paper-deep/60',
+        )}
+      >
+        <span
+          className={cn(
+            'flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold',
+            isActive ? 'bg-evergreen text-white' : 'bg-sage/25 text-evergreen',
+            archived && !isActive && 'opacity-70',
+          )}
+          aria-hidden="true"
+        >
+          {initialsFromName(summary.homeName)}
+        </span>
+
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center justify-between gap-2">
+            <span className={cn('truncate text-sm font-semibold', archived ? 'text-ink-soft' : 'text-ink')}>
+              {summary.homeName}
+            </span>
+            <span className="shrink-0 text-[10px] text-ink-soft">
+              {formatConversationTime(summary.archivedAt ?? summary.lastMessageAt)}
+            </span>
+          </span>
+          <span className="mt-1 flex items-center justify-between gap-2">
+            <span className="flex min-w-0 items-center gap-1.5">
+              {summary.title && (
+                <span className="shrink-0 rounded bg-paper-deep px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
+                  {summary.title}
+                </span>
+              )}
+              <span className={cn('truncate text-xs', hasUnread && !archived ? 'text-ink' : 'text-ink-soft')}>
+                {previewText(summary)}
+              </span>
+            </span>
+            {hasUnread && (
+              <span className="flex shrink-0 items-center gap-1">
+                {summary.hasUrgent && (
+                  <TriangleAlert className="size-3.5 text-coral" aria-label="Unread urgent message" />
+                )}
+                <span className="min-w-5 rounded-full bg-evergreen px-1.5 text-center text-[10px] font-bold leading-5 text-white">
+                  {summary.unreadCount}
+                </span>
+              </span>
+            )}
+          </span>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => onSetArchived(!archived)}
+        disabled={busy}
+        title={actionLabel}
+        aria-label={actionLabel}
+        className="flex w-10 shrink-0 items-center justify-center text-ink-soft transition hover:bg-paper-deep hover:text-evergreen disabled:opacity-40"
+      >
+        {busy ? (
+          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+        ) : archived ? (
+          <ArchiveRestore className="size-4" aria-hidden="true" />
+        ) : (
+          <Archive className="size-4" aria-hidden="true" />
+        )}
+      </button>
+    </li>
+  )
+}
+
 export function ConversationList({
   homes,
   conversations,
@@ -33,20 +141,30 @@ export function ConversationList({
   activeHomeId,
   onSelectConversation,
   onStartConversation,
+  onSetArchived,
+  archivingId,
+  archiveError,
   status,
   error,
   onRetry,
 }: ConversationListProps) {
   const [query, setQuery] = useState('')
+  const [showArchived, setShowArchived] = useState(false)
 
-  const { threads, unstarted } = useMemo(() => {
+  const { threads, archived, unstarted } = useMemo(() => {
     const term = query.trim().toLowerCase()
     const matches = (value: string) => value.toLowerCase().includes(term)
 
-    // Threads the home portal has already created, most recent activity first.
-    const threads = conversations.filter(
+    // Every thread the home portal created or replied in, newest activity first.
+    const visible = conversations.filter(
       (conversation) => !term || matches(conversation.homeName) || matches(conversation.title ?? ''),
     )
+    const threads = visible
+      .filter((conversation) => !conversation.archivedAt)
+      .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))
+    const archived = visible
+      .filter((conversation) => conversation.archivedAt)
+      .sort((a, b) => (b.archivedAt ?? '').localeCompare(a.archivedAt ?? ''))
 
     // Homes we serve that have no thread at all yet — the pharmacy can start one.
     const withThread = new Set(conversations.map((conversation) => conversation.homeId))
@@ -55,15 +173,16 @@ export function ConversationList({
       .filter((home) => !term || matches(home.name))
       .sort((a, b) => a.name.localeCompare(b.name))
 
-    return { threads, unstarted }
+    return { threads, archived, unstarted }
   }, [homes, conversations, query])
 
   if (status === 'loading') return <ChatLoadingState />
   if (status === 'error') return <ChatErrorState message={error ?? 'Unable to load conversations.'} onRetry={onRetry} />
-  if (homes.length === 0) return <ChatEmptyState onRefresh={onRetry} />
+  if (homes.length === 0 && conversations.length === 0) return <ChatEmptyState onRefresh={onRetry} />
 
   const totalUnread = conversations.reduce((sum, summary) => sum + summary.unreadCount, 0)
-  const isEmpty = threads.length === 0 && unstarted.length === 0
+  const isEmpty = threads.length === 0 && unstarted.length === 0 && archived.length === 0
+  const archivedOpen = showArchived || query.trim().length > 0
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -87,6 +206,11 @@ export function ConversationList({
             className="h-9 w-full min-w-0 bg-transparent text-sm text-ink outline-none placeholder:text-ink-soft/70"
           />
         </label>
+        {archiveError && (
+          <p className="mt-2 text-[11px] font-semibold leading-relaxed text-coral" role="alert">
+            {archiveError}
+          </p>
+        )}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto chat-scroll">
@@ -98,64 +222,17 @@ export function ConversationList({
           </p>
         ) : (
           <ul className="flex flex-col">
-            {threads.map((summary) => {
-              const isActive = summary.conversationId === activeConversationId
-              const hasUnread = summary.unreadCount > 0
-              return (
-                <li key={summary.conversationId}>
-                  <button
-                    type="button"
-                    onClick={() => onSelectConversation(summary.conversationId)}
-                    aria-current={isActive ? 'true' : undefined}
-                    className={cn(
-                      'flex w-full items-start gap-3 border-b border-line/70 px-4 py-3.5 text-left transition',
-                      isActive ? 'bg-sage/15' : 'hover:bg-paper-deep/60',
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold',
-                        isActive ? 'bg-evergreen text-white' : 'bg-sage/25 text-evergreen',
-                      )}
-                      aria-hidden="true"
-                    >
-                      {initialsFromName(summary.homeName)}
-                    </span>
-
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center justify-between gap-2">
-                        <span className="truncate text-sm font-semibold text-ink">{summary.homeName}</span>
-                        <span className="shrink-0 text-[10px] text-ink-soft">
-                          {formatConversationTime(summary.lastMessageAt)}
-                        </span>
-                      </span>
-                      <span className="mt-1 flex items-center justify-between gap-2">
-                        <span className="flex min-w-0 items-center gap-1.5">
-                          {summary.title && (
-                            <span className="shrink-0 rounded bg-paper-deep px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
-                              {summary.title}
-                            </span>
-                          )}
-                          <span className={cn('truncate text-xs', hasUnread ? 'text-ink' : 'text-ink-soft')}>
-                            {previewText(summary)}
-                          </span>
-                        </span>
-                        {hasUnread && (
-                          <span className="flex shrink-0 items-center gap-1">
-                            {summary.hasUrgent && (
-                              <TriangleAlert className="size-3.5 text-coral" aria-label="Unread urgent message" />
-                            )}
-                            <span className="min-w-5 rounded-full bg-evergreen px-1.5 text-center text-[10px] font-bold leading-5 text-white">
-                              {summary.unreadCount}
-                            </span>
-                          </span>
-                        )}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
+            {threads.map((summary) => (
+              <ThreadRow
+                key={summary.conversationId}
+                summary={summary}
+                isActive={summary.conversationId === activeConversationId}
+                archived={false}
+                busy={archivingId === summary.conversationId}
+                onSelect={() => onSelectConversation(summary.conversationId)}
+                onSetArchived={(next) => onSetArchived(summary.conversationId, next)}
+              />
+            ))}
 
             {unstarted.map((home) => {
               const isActive = activeConversationId === null && home.id === activeHomeId
@@ -191,6 +268,42 @@ export function ConversationList({
                 </li>
               )
             })}
+
+            {archived.length > 0 && (
+              <>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setShowArchived((current) => !current)}
+                    aria-expanded={archivedOpen}
+                    className="flex w-full items-center gap-2 border-b border-line/70 bg-paper-deep/50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-ink-soft transition hover:bg-paper-deep"
+                  >
+                    {archivedOpen ? (
+                      <ChevronDown className="size-3.5" aria-hidden="true" />
+                    ) : (
+                      <ChevronRight className="size-3.5" aria-hidden="true" />
+                    )}
+                    Archived
+                    <span className="ml-auto rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold normal-case">
+                      {archived.length}
+                    </span>
+                  </button>
+                </li>
+
+                {archivedOpen &&
+                  archived.map((summary) => (
+                    <ThreadRow
+                      key={summary.conversationId}
+                      summary={summary}
+                      isActive={summary.conversationId === activeConversationId}
+                      archived
+                      busy={archivingId === summary.conversationId}
+                      onSelect={() => onSelectConversation(summary.conversationId)}
+                      onSetArchived={(next) => onSetArchived(summary.conversationId, next)}
+                    />
+                  ))}
+              </>
+            )}
           </ul>
         )}
       </div>

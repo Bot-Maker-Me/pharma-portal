@@ -6,6 +6,7 @@ import { ArrowLeft, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useChatData } from '@/lib/chat/use-chat'
 import { initialsFromName } from '@/lib/chat/format'
+import { tenantThemeClass } from '@/lib/tenant/theme'
 import type { ChatIdentity } from '@/lib/chat/types'
 import { ConversationList } from './conversation-list'
 import { MessageThread } from './message-thread'
@@ -31,7 +32,7 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
   }
 
   return (
-    <div className="chat-shell flex h-dvh flex-col bg-paper">
+    <div className={cn('chat-shell flex h-dvh flex-col bg-paper', tenantThemeClass(identity.theme))}>
       <header className="flex items-center gap-3 border-b border-line bg-surface px-4 py-3 sm:px-6">
         <Link
           href="/"
@@ -89,6 +90,9 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
             activeHomeId={chat.activeHomeId}
             onSelectConversation={handleSelectConversation}
             onStartConversation={handleStartConversation}
+            onSetArchived={(conversationId, archived) => void chat.archiveConversation(conversationId, archived)}
+            archivingId={chat.archivingId}
+            archiveError={chat.archiveError}
             status={chat.status}
             error={chat.error}
             onRetry={chat.retry}
@@ -101,6 +105,7 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
               homeName={activeHomeName}
               conversationTitle={chat.activeSummary?.title ?? null}
               residentRef={chat.activeSummary?.residentRef ?? null}
+              archivedAt={chat.activeSummary?.archivedAt ?? null}
               messages={chat.messages}
               status={chat.threadStatus}
               error={chat.threadError}

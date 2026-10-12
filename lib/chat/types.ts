@@ -5,9 +5,11 @@
 // write one shared mailbox:
 //
 //   chat_threads    id, home_id, pharmacy_id, resident_ref, subject, urgent,
-//                   created_by, created_at, last_message_at
+//                   created_by, created_at, last_message_at, archived_at
 //   portal_messages id, user_id, thread_id, sender_role, sender_name, body,
 //                   urgent, read_at, created_at
+
+import type { TenantTheme } from '@/lib/tenant/theme'
 
 export type Urgency = 'routine' | 'urgent' | 'emergency'
 
@@ -18,6 +20,8 @@ export type ChatIdentity = {
   userId: string | null
   displayName: string
   organization: string | null
+  /** The signed-in pharmacy's branded theme (`tenants.theme`). */
+  theme: TenantTheme
 }
 
 export type AuthorizedHome = {
@@ -38,6 +42,8 @@ export type ConversationSummary = {
   lastMessageAt: string
   unreadCount: number
   hasUrgent: boolean
+  /** When the pharmacy archived the thread (chat_threads.archived_at). */
+  archivedAt: string | null
 }
 
 export type ChatMessage = {
@@ -93,5 +99,7 @@ export interface ChatBackend {
   ensureConversation(homeId: string, input: NewConversationInput): Promise<string>
   sendMessage(input: SendMessageInput): Promise<ChatMessage>
   markRead(conversationId: string): Promise<void>
+  /** Files a thread away — or brings it back — without deleting anything. */
+  setArchived(conversationId: string, archived: boolean): Promise<void>
   subscribe(handlers: ChatSubscriptionHandlers): () => void
 }

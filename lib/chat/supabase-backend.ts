@@ -38,6 +38,8 @@ type ThreadRow = {
   created_by: string | null
   created_at: string
   last_message_at: string | null
+  /** Added by 20261020000000_tenant_theme_and_chat_archive.sql. */
+  archived_at?: string | null
 }
 
 type PortalMessageRow = {
@@ -62,6 +64,10 @@ type PostgrestLikeError = {
 // How far back we look when computing previews and unread counts.
 const SUMMARY_MESSAGE_LIMIT = 5000
 const THREAD_MESSAGE_LIMIT = 1000
+
+const THREAD_COLUMNS = 'id, home_id, pharmacy_id, resident_ref, subject, urgent, created_by, created_at, last_message_at, archived_at'
+/** Same columns before the archive migration — used as a fallback so an un-migrated project still opens. */
+const THREAD_COLUMNS_LEGACY = 'id, home_id, pharmacy_id, resident_ref, subject, urgent, created_by, created_at, last_message_at'
 
 function toUrgency(urgent: boolean | null): Urgency {
   return urgent ? 'urgent' : 'routine'
@@ -110,6 +116,7 @@ function mapThread(row: ThreadRow, homeName: string, messages: PortalMessageRow[
     lastMessageAt: last?.created_at ?? row.last_message_at ?? row.created_at,
     unreadCount: unread.length,
     hasUrgent: unread.some((message) => message.urgent === true),
+    archivedAt: row.archived_at ?? null,
   }
 }
 
@@ -121,21 +128,33 @@ export function createSupabaseChatBackend(): ChatBackend {
     mode: 'live',
 
     async load(): Promise<ChatSnapshot> {
-      const [homesResult, threadsResult, messagesResult] = await Promise.all([
+      const [homesResult, messagesResult, threadsResult] = await Promise.all([
         supabase.from('homes').select('id, name').order('name', { ascending: true }),
-        supabase
-          .from('chat_threads')
-          .select('id, home_id, pharmacy_id, resident_ref, subject, urgent, created_by, created_at, last_message_at')
-          .order('last_message_at', { ascending: false }),
         supabase
           .from('portal_messages')
           .select('id, user_id, thread_id, sender_role, sender_name, body, urgent, read_at, created_at')
           .order('created_at', { ascending: false })
           .limit(SUMMARY_MESSAGE_LIMIT),
+        supabase
+          .from('chat_threads')
+          .select(THREAD_COLUMNS)
+          .order('last_message_at', { ascending: false }),
       ])
       if (homesResult.error) throw toChatError(homesResult.error)
-      if (threadsResult.error) throw toChatError(threadsResult.error)
       if (messagesResult.error) throw toChatError(messagesResult.error)
+
+      // Retry without the archive column when it is not in this database yet.
+      let threadRows = (threadsResult.data ?? []) as ThreadRow[]
+      let threadError = threadsResult.error
+      if (threadError) {
+        const legacy = await supabase
+          .from('chat_threads')
+          .select(THREAD_COLUMNS_LEGACY)
+          .order('last_message_at', { ascending: false })
+        threadRows = (legacy.data ?? []) as ThreadRow[]
+        threadError = legacy.error
+      }
+      if (threadError) throw toChatError(threadError)
 
       const homes: AuthorizedHome[] = (homesResult.data ?? []).map((home) => ({ id: home.id, name: home.name }))
       const homeNames = new Map(homes.map((home) => [home.id, home.name]))
@@ -149,7 +168,7 @@ export function createSupabaseChatBackend(): ChatBackend {
         else messagesByThread.set(message.thread_id, [message])
       })
 
-      const summaries: ConversationSummary[] = ((threadsResult.data ?? []) as ThreadRow[])
+      const summaries: ConversationSummary[] = threadRows
         .map((thread) => {
           const homeName = thread.home_id ? homeNames.get(thread.home_id) ?? 'Nursing home' : 'Nursing home'
           return mapThread(thread, homeName, messagesByThread.get(thread.id) ?? [])
@@ -252,6 +271,24 @@ export function createSupabaseChatBackend(): ChatBackend {
         .eq('thread_id', conversationId)
         .eq('sender_role', SENDER_ROLE_HOME)
         .is('read_at', null)
+    },
+
+    async setArchived(conversationId: string, archived: boolean): Promise<void> {
+      // Archiving only sets a timestamp on the thread — no message is ever
+      // deleted, and the nursing home side keeps seeing the conversation.
+      const { error } = await supabase
+        .from('chat_threads')
+        .update({ archived_at: archived ? new Date().toISOString() : null })
+        .eq('id', conversationId)
+      if (!error) return
+
+      const failure = toChatError(error)
+      if (/archived_at/i.test(failure.message)) {
+        throw new Error(
+          'Archiving is not switched on in this database yet — run 20261020000000_tenant_theme_and_chat_archive.sql in Supabase.',
+        )
+      }
+      throw failure
     },
 
     subscribe(handlers: ChatSubscriptionHandlers): () => void {

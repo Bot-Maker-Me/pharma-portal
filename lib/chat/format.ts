@@ -1,7 +1,14 @@
 // Date helpers built on the native Intl API (no date libraries).
 
 const timeFormatter = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
-const dayFormatter = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'short', day: 'numeric' })
+// Full calendar date, e.g. "Sat, Oct 12, 2026" — day dividers always spell the
+// date out so a thread can be read without guessing which day it refers to.
+const dateFormatter = new Intl.DateTimeFormat(undefined, {
+  weekday: 'short',
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+})
 const fullFormatter = new Intl.DateTimeFormat(undefined, {
   month: 'short',
   day: 'numeric',
@@ -29,16 +36,23 @@ export function formatConversationTime(iso: string): string {
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(date)
 }
 
+/** Day divider label: "Today · Sat, Oct 12, 2026", "Yesterday · …", or the date alone. */
 export function formatDayLabel(iso: string): string {
   const date = new Date(iso)
   const now = new Date()
-  if (date.toDateString() === now.toDateString()) return 'Today'
+  const calendarDate = dateFormatter.format(date)
+  if (date.toDateString() === now.toDateString()) return `Today · ${calendarDate}`
 
   const yesterday = new Date(now)
   yesterday.setDate(now.getDate() - 1)
-  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday'
+  if (date.toDateString() === yesterday.toDateString()) return `Yesterday · ${calendarDate}`
 
-  return dayFormatter.format(date)
+  return calendarDate
+}
+
+/** The date on its own, e.g. "Sat, Oct 12, 2026" — used where the time is not needed. */
+export function formatCalendarDate(iso: string): string {
+  return dateFormatter.format(new Date(iso))
 }
 
 export function formatFullTimestamp(iso: string): string {

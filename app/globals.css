@@ -196,12 +196,14 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 .admin-error { margin: 12px 0 0; color: var(--coral); font-size: 12px; font-weight: 600; }
 .admin-success { margin: 12px 0 0; color: #47715b; font-size: 12px; font-weight: 600; }
 .admin-primary-button { display: inline-flex; align-items: center; gap: 7px; border: 0; background: var(--evergreen); color: var(--white); padding: 10px 16px; font-size: 13px; font-weight: 700; }
-.admin-primary-button:hover:not(:disabled) { background: #245445; }
+.admin-primary-button:hover:not(:disabled) { background: color-mix(in srgb, var(--evergreen) 88%, #000); }
 .admin-primary-button:disabled { opacity: .5; cursor: not-allowed; }
 .admin-danger-button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--white); color: var(--coral); padding: 6px 10px; font-size: 12px; font-weight: 600; }
-.admin-danger-button:hover:not(:disabled) { background: rgba(215,111,84,.08); }
+.admin-danger-button:hover:not(:disabled) { background: color-mix(in srgb, var(--coral) 8%, transparent); }
 .admin-field { display: flex; flex-direction: column; gap: 6px; margin-top: 0; color: var(--ink-soft); font-size: 12px; font-weight: 600; }
 .admin-field input, .admin-field select, .admin-field textarea, .admin-textarea { width: 100%; border: 1px solid var(--line); background: var(--paper); color: var(--ink); padding: 9px 11px; }
+.admin-select { border: 1px solid var(--line); background: var(--white); color: var(--ink); padding: 7px 9px; font-size: 12px; font-weight: 600; }
+.admin-select:disabled { opacity: .5; }
 .admin-field textarea, .admin-textarea { resize: vertical; }
 .admin-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); padding: 12px 2px; }
 .admin-row:first-child { border-top: 0; }
@@ -212,11 +214,11 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 .admin-search input { width: 100%; height: 34px; border: 0; background: transparent; color: var(--ink); outline: none; }
 .admin-user-row { display: flex; width: 100%; align-items: flex-start; gap: 10px; border: 0; border-bottom: 1px solid var(--line); background: transparent; padding: 12px; text-align: left; }
 .admin-user-row:hover { background: var(--paper-deep); }
-.admin-user-row.is-active { background: rgba(140,169,154,.18); }
-.admin-user-avatar { display: flex; width: 32px; height: 32px; flex: 0 0 32px; align-items: center; justify-content: center; border-radius: 9999px; background: rgba(140,169,154,.28); color: var(--evergreen); font-size: 11px; font-weight: 700; }
+.admin-user-row.is-active { background: color-mix(in srgb, var(--sage) 18%, transparent); }
+.admin-user-avatar { display: flex; width: 32px; height: 32px; flex: 0 0 32px; align-items: center; justify-content: center; border-radius: 9999px; background: color-mix(in srgb, var(--sage) 28%, transparent); color: var(--evergreen); font-size: 11px; font-weight: 700; }
 .admin-split-detail { min-height: 0; overflow-y: auto; background: var(--paper); }
 .admin-check-row { display: flex; width: 100%; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--white); padding: 9px 11px; text-align: left; font-size: 12px; color: var(--ink-soft); }
-.admin-check-row.is-on { border-color: rgba(23,60,49,.35); background: rgba(140,169,154,.16); color: var(--ink); font-weight: 600; }
+.admin-check-row.is-on { border-color: color-mix(in srgb, var(--evergreen) 35%, transparent); background: color-mix(in srgb, var(--sage) 16%, transparent); color: var(--ink); font-weight: 600; }
 .admin-check-box { display: flex; width: 15px; height: 15px; flex: 0 0 15px; align-items: center; justify-content: center; border: 1px solid var(--line); background: var(--white); color: var(--white); }
 .admin-check-box.is-on { border-color: var(--evergreen); background: var(--evergreen); }
 @media (max-width: 900px) {
@@ -239,7 +241,7 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 .ws-count { color: var(--coral); font-size: 12px; font-weight: 700; }
 .ws-nav-item { display: flex; width: 100%; align-items: center; gap: 9px; border: 0; background: transparent; color: var(--ink-soft); padding: 9px 10px; text-align: left; font-size: 13px; font-weight: 600; }
 .ws-nav-item:hover { background: var(--paper-deep); color: var(--ink); }
-.ws-nav-item.is-active { background: rgba(140,169,154,.2); color: var(--evergreen); }
+.ws-nav-item.is-active { background: color-mix(in srgb, var(--sage) 20%, transparent); color: var(--evergreen); }
 .ws-nav-count { margin-left: auto; color: var(--ink-soft); font-size: 11px; font-weight: 700; }
 .ws-search { display: flex; max-width: 380px; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--white); padding: 0 11px; }
 .ws-search input { width: 100%; height: 36px; border: 0; background: transparent; color: var(--ink); outline: none; }
@@ -248,6 +250,27 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 .ws-table th { height: 36px; padding: 0 14px; border-bottom: 1px solid var(--line); color: var(--ink-soft); text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
 .ws-table td { padding: 11px 14px; border-bottom: 1px solid var(--line); color: var(--ink-soft); }
 .ws-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--evergreen); }
+
+/* ---------------------------------------------------------------------------
+   Pharmacy themes — one block per branded pharmacy.
+
+   The theme key lives in public.tenants.theme (see lib/tenant/theme.ts) and the
+   shell of every screen that pharmacy opens carries `.theme-<key>`. Re-pointing
+   the tokens here is therefore enough to re-skin that pharmacy — and only that
+   pharmacy — because the Tailwind colour utilities (bg-evergreen, text-ink, …)
+   resolve the same variables at use time.
+--------------------------------------------------------------------------- */
+.theme-pharmasave {
+  --paper: #fdf6f7;
+  --paper-deep: #f6e2e6;
+  --ink: #2b0d14;
+  --ink-soft: #7c4750;
+  --evergreen: #c8102e;
+  --sage: #efa7b4;
+  --coral: #9d0b23;
+  --line: #eed2d7;
+  --white: #ffffff;
+}
 
 a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--coral); outline-offset: 3px; }
 .auth-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: rgba(23,33,29,.42); }

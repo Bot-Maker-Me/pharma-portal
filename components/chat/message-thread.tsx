@@ -1,9 +1,16 @@
 'use client'
 
 import { useEffect, useMemo, useRef } from 'react'
-import { ChevronLeft, Hash, ShieldCheck, TriangleAlert } from 'lucide-react'
+import { Archive, ChevronLeft, Hash, ShieldCheck, TriangleAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatDayLabel, formatFullTimestamp, formatMessageTime, initialsFromName, isSameDay } from '@/lib/chat/format'
+import {
+  formatCalendarDate,
+  formatDayLabel,
+  formatFullTimestamp,
+  formatMessageTime,
+  initialsFromName,
+  isSameDay,
+} from '@/lib/chat/format'
 import { urgencyMeta } from '@/lib/chat/urgency'
 import type { ChatMessage, SendMessageInput } from '@/lib/chat/types'
 import { ChatErrorState, ChatLoadingState, ThreadStartState } from './chat-states'
@@ -14,6 +21,8 @@ type MessageThreadProps = {
   homeName: string
   conversationTitle: string | null
   residentRef: string | null
+  /** Set when the pharmacy has filed this thread away. */
+  archivedAt: string | null
   messages: ChatMessage[]
   status: ThreadStatus
   error: string | null
@@ -29,6 +38,7 @@ export function MessageThread({
   homeName,
   conversationTitle,
   residentRef,
+  archivedAt,
   messages,
   status,
   error,
@@ -90,6 +100,12 @@ export function MessageThread({
             )}
           </p>
         </div>
+        {archivedAt && (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-paper-deep px-2.5 py-1 text-[10px] font-semibold text-ink-soft">
+            <Archive className="size-3" aria-hidden="true" />
+            Archived {formatCalendarDate(archivedAt)}
+          </span>
+        )}
         <span
           className={cn(
             'shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide',
@@ -110,7 +126,9 @@ export function MessageThread({
             <div key={`${group.day}-${group.messages[0].id}`} className="mb-4">
               <div className="mb-4 flex items-center gap-3">
                 <span className="h-px flex-1 bg-line" />
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft">{group.day}</span>
+                <span className="text-center text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
+                  {group.day}
+                </span>
                 <span className="h-px flex-1 bg-line" />
               </div>
 

@@ -23,6 +23,7 @@ const PHARMACY_NAME = 'Jordan Davis'
 const now = Date.now()
 const minutesAgo = (n: number) => new Date(now - n * 60 * 1000).toISOString()
 const hoursAgo = (n: number) => new Date(now - n * 60 * 60 * 1000).toISOString()
+const daysAgo = (n: number) => new Date(now - n * 24 * 60 * 60 * 1000).toISOString()
 
 type PreviewThread = {
   id: string
@@ -30,6 +31,7 @@ type PreviewThread = {
   homeName: string
   title: string
   residentRef: string | null
+  archivedAt: string | null
 }
 
 const homes: AuthorizedHome[] = [
@@ -45,6 +47,7 @@ const threads: PreviewThread[] = [
     homeName: 'Riverbend Care Centre',
     title: 'Medicine supply',
     residentRef: 'R-3118',
+    archivedAt: null,
   },
   {
     id: 'conv-riverbend-2',
@@ -52,6 +55,7 @@ const threads: PreviewThread[] = [
     homeName: 'Riverbend Care Centre',
     title: 'Blister packs',
     residentRef: null,
+    archivedAt: null,
   },
   {
     id: 'conv-harbour',
@@ -59,6 +63,8 @@ const threads: PreviewThread[] = [
     homeName: 'Harbourview Nursing Home',
     title: 'Blister pack — R-5502',
     residentRef: 'R-5502',
+    // Already filed away, so the Archived section is explorable in preview mode.
+    archivedAt: daysAgo(12),
   },
 ]
 
@@ -176,6 +182,7 @@ function summarize(): ConversationSummary[] {
         lastMessageAt: last?.createdAt ?? new Date().toISOString(),
         unreadCount: unread.length,
         hasUrgent: unread.some((item) => item.urgency !== 'routine'),
+        archivedAt: thread.archivedAt,
       }
     })
     .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))
@@ -212,6 +219,7 @@ export function createPreviewChatBackend(): ChatBackend {
         homeName: home?.name ?? 'Nursing home',
         title: input.subject,
         residentRef: input.residentId,
+        archivedAt: null,
       }
       threads.push(thread)
       emitConversationChange()
@@ -247,6 +255,13 @@ export function createPreviewChatBackend(): ChatBackend {
 
     async markRead(conversationId: string): Promise<void> {
       markThreadRead(conversationId, true)
+    },
+
+    async setArchived(conversationId: string, archived: boolean): Promise<void> {
+      const thread = threads.find((item) => item.id === conversationId)
+      if (!thread) return
+      thread.archivedAt = archived ? new Date().toISOString() : null
+      emitConversationChange()
     },
 
     subscribe(handlers: ChatSubscriptionHandlers): () => void {

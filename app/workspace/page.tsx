@@ -5,6 +5,7 @@ import { ShieldCheck, Wrench } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getSessionTenant } from '@/lib/features/server'
 import { loadWorkspaceData } from '@/lib/workspace/data'
+import { loadTenantIdentity } from '@/lib/tenant/server'
 import { WorkspaceView } from '@/components/workspace/workspace-view'
 
 export const dynamic = 'force-dynamic'
@@ -114,14 +115,15 @@ export default async function WorkspacePage() {
     )
   }
 
-  const [tenantResult, data] = await Promise.all([
-    supabase.from('tenants').select('name').eq('id', context.tenantId).maybeSingle(),
+  const [tenant, data] = await Promise.all([
+    loadTenantIdentity(context.tenantId),
     loadWorkspaceData(context.tenantId),
   ])
 
   return (
     <WorkspaceView
-      tenantName={tenantResult.data?.name ?? 'Your pharmacy'}
+      tenantName={tenant.name ?? 'Your pharmacy'}
+      theme={tenant.theme}
       userEmail={user.email ?? ''}
       isPlatformAdmin={isPlatformAdmin}
       data={data}

@@ -27,6 +27,26 @@ The Pharma Portal reads these tables **directly** — no database functions/RPCs
 only needs `SELECT`/`INSERT` grants plus the RLS policies. If the tables already existed
 (they do in the Nursing Home Portal project) the migration adds any missing columns.
 
+## Dates and archiving
+
+- Day dividers spell the date out (`Today · Sat, Oct 12, 2026`) — see `formatDayLabel`
+  in `lib/chat/format.ts`. Each bubble shows the time and carries the full timestamp
+  in its `title` attribute.
+- The archive button on a conversation row sets `chat_threads.archived_at` (migration
+  `20261020000000_tenant_theme_and_chat_archive.sql`). It is never a delete: the
+  nursing home keeps the thread, and the pharmacy can restore it from the *Archived*
+  section at the bottom of the conversation list.
+
+## Per-pharmacy themes
+
+`public.tenants.theme` holds one brand key per pharmacy. `lib/tenant/theme.ts` resolves
+it and the shell of every screen that pharmacy opens carries `.theme-<key>`, whose
+design-token overrides live in `app/globals.css` (`.theme-pharmasave`). The Tailwind
+colour utilities read those variables at use time, so a branded pharmacy gets its own
+palette in the workspace, Chat with Home and the admin console — and no other pharmacy
+is affected. Set it in Admin console → Pharmacies, or seed it in one go with
+`supabase/add-pharmasave-west-hills.sql`.
+
 ## Access model
 
 - A **pharmacy user** sees a home only if a `pharmacy_home_access` row exists for them.
@@ -66,7 +86,9 @@ use this shared backend, the Nursing Home portal should:
 | `components/chat/conversation-list.tsx` | Left panel: homes + unread/urgent badges. |
 | `components/chat/message-thread.tsx` | Right panel: thread, priority flags, read receipts. |
 | `components/chat/message-composer.tsx` | Priority selector + resident ID reference. |
-| `lib/chat/use-chat.ts` | All state: list, thread, realtime, sends. |
+| `lib/chat/use-chat.ts` | All state: list, thread, realtime, sends, archiving. |
+| `lib/tenant/theme.ts` | Per-pharmacy theme registry (`default`, `pharmasave`). |
+| `lib/tenant/server.ts` | Server-side tenant name + theme lookup. |
 | `lib/chat/supabase-backend.ts` | Live backend (shared tables). |
 | `lib/chat/preview-backend.ts` | Sample-data backend used only when unconfigured. |
 

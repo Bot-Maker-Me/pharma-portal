@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getSessionTenant } from '@/lib/features/server'
+import { loadTenantIdentity } from '@/lib/tenant/server'
+import { defaultTenantTheme } from '@/lib/tenant/theme'
 import { ChatExperience } from '@/components/chat/chat-experience'
 import type { ChatIdentity } from '@/lib/chat/types'
 
@@ -20,6 +23,7 @@ export default async function ChatPage() {
     userId: null,
     displayName: 'Pharmacy team',
     organization: null,
+    theme: defaultTenantTheme,
   }
 
   if (configured) {
@@ -30,11 +34,15 @@ export default async function ChatPage() {
     } = await supabase.auth.getUser()
     if (!user) redirect('/')
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('full_name, organization')
-      .eq('id', user.id)
-      .maybeSingle()
+    const [profileResult, context] = await Promise.all([
+      supabase.from('profiles').select('full_name, organization').eq('id', user.id).maybeSingle(),
+      getSessionTenant(),
+    ])
+    const profile = profileResult.data
+
+    // The pharmacy's branded theme travels with the session, so a pharmacy that
+    // carries one gets it on every chat screen it opens.
+    const theme = context ? (await loadTenantIdentity(context.tenantId)).theme : defaultTenantTheme
 
     identity = {
       configured,
@@ -43,6 +51,7 @@ export default async function ChatPage() {
       // `||` (not `??`) so an empty full_name falls through to the email prefix.
       displayName: profile?.full_name?.trim() || user.email?.split('@')[0] || 'Pharmacy team',
       organization: profile?.organization?.trim() || null,
+      theme,
     }
   }
 

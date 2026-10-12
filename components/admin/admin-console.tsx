@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { AlertTriangle, Loader2, MessagesSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { loadHomes, loadTenants, loadUsers, type AdminHome, type AdminTenant, type AdminUser } from '@/lib/admin/data'
+import { parseTenantTheme, tenantThemeClass } from '@/lib/tenant/theme'
 import { workspaceSections, type WorkspaceSectionKey } from '@/lib/workspace/sections'
 import { UsersPanel } from '@/components/admin/users-panel'
 import { HomesPanel } from '@/components/admin/homes-panel'
@@ -88,7 +89,9 @@ export function AdminConsole({ adminEmail }: { adminEmail: string }) {
   const needsTenant = view.kind === 'formulary' || view.kind === 'section'
 
   return (
-    <div className="admin-shell">
+    // The console wears the selected pharmacy's theme, so managing a branded
+    // pharmacy looks like that pharmacy — and nothing changes for the rest.
+    <div className={cn('admin-shell', tenantThemeClass(parseTenantTheme(selectedTenant?.theme)))}>
       <aside className="admin-rail">
         <div className="admin-rail-wordmark">
           <span className="wordmark-mark" aria-hidden="true">

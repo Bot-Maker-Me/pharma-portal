@@ -5,16 +5,19 @@ import Link from 'next/link'
 import { Inbox, LayoutList, MessagesSquare, Search, ShieldCheck, Table2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { workspaceSections } from '@/lib/workspace/sections'
+import { tenantThemeClass, type TenantTheme } from '@/lib/tenant/theme'
 import type { WorkspaceData } from '@/lib/workspace/types'
 
 type WorkspaceViewProps = {
   tenantName: string
+  /** The pharmacy's branded theme (`tenants.theme`). */
+  theme: TenantTheme
   userEmail: string
   isPlatformAdmin: boolean
   data: WorkspaceData
 }
 
-export function WorkspaceView({ tenantName, userEmail, isPlatformAdmin, data }: WorkspaceViewProps) {
+export function WorkspaceView({ tenantName, theme, userEmail, isPlatformAdmin, data }: WorkspaceViewProps) {
   const [section, setSection] = useState<string>('formulary')
   const [query, setQuery] = useState('')
 
@@ -34,7 +37,7 @@ export function WorkspaceView({ tenantName, userEmail, isPlatformAdmin, data }: 
   const activeSection = workspaceSections.find((item) => item.key === section)
 
   return (
-    <div className="ws-shell flex min-h-dvh flex-col bg-paper">
+    <div className={cn('ws-shell flex min-h-dvh flex-col bg-paper', tenantThemeClass(theme))}>
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface px-4 py-3 sm:px-6">
         <div className="flex items-center gap-2.5">
           <span className="flex size-7 items-center justify-center bg-evergreen text-sm font-bold text-white">+</span>

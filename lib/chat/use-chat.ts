@@ -27,9 +27,13 @@ export type ChatController = {
   threadError: string | null
   sending: boolean
   sendError: string | null
+  /** The conversation currently being filed away or restored, if any. */
+  archivingId: string | null
+  archiveError: string | null
   selectConversation: (conversationId: string) => void
   startConversation: (homeId: string) => void
   sendMessage: (input: Omit<SendMessageInput, 'conversationId'>) => Promise<boolean>
+  archiveConversation: (conversationId: string, archived: boolean) => Promise<boolean>
   retry: () => void
 }
 
@@ -59,6 +63,8 @@ export function useChatData(): ChatController {
   const [threadError, setThreadError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
+  const [archivingId, setArchivingId] = useState<string | null>(null)
+  const [archiveError, setArchiveError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
 
   const activeConversationRef = useRef<string | null>(null)
@@ -261,6 +267,36 @@ export function useChatData(): ChatController {
     setReloadKey((current) => current + 1)
   }, [])
 
+  // Archiving is a property of the thread, not a delete: the row is updated
+  // optimistically so the list responds instantly, then reconciled with the
+  // server copy.
+  const archiveConversation = useCallback(
+    async (conversationId: string, archived: boolean): Promise<boolean> => {
+      if (!backend) return false
+      setArchivingId(conversationId)
+      setArchiveError(null)
+      try {
+        await backend.setArchived(conversationId, archived)
+        const stamp = archived ? new Date().toISOString() : null
+        setConversations((current) =>
+          current.map((item) =>
+            item.conversationId === conversationId ? { ...item, archivedAt: stamp } : item,
+          ),
+        )
+        void refreshSummaries()
+        return true
+      } catch (archiveFailure: unknown) {
+        setArchiveError(
+          archiveFailure instanceof Error ? archiveFailure.message : 'That thread could not be updated.',
+        )
+        return false
+      } finally {
+        setArchivingId(null)
+      }
+    },
+    [backend, refreshSummaries],
+  )
+
   const activeSummary = conversations.find((item) => item.conversationId === activeConversationId) ?? null
 
   return {
@@ -277,9 +313,12 @@ export function useChatData(): ChatController {
     threadError,
     sending,
     sendError,
+    archivingId,
+    archiveError,
     selectConversation,
     startConversation,
     sendMessage,
+    archiveConversation,
     retry,
   }
 }
