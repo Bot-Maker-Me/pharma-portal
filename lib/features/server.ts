@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { FeatureGrant, TenantContext } from './registry'
 
@@ -47,6 +47,26 @@ export async function requirePlatformAdmin() {
   const { data } = await supabase.from('platform_admins').select('user_id').eq('user_id', context.userId).maybeSingle()
   if (!data) notFound()
   return context
+}
+
+/**
+ * Platform-admin gate that does NOT require tenant membership — used by the
+ * admin console, which manages tenants rather than belonging to one.
+ * Signed-out visitors are sent to the sign-in page; everyone else gets a 404.
+ */
+export async function requirePlatformAdminOnly(): Promise<{ userId: string }> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) notFound()
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect('/')
+
+  const { data } = await supabase.from('platform_admins').select('user_id').eq('user_id', user.id).maybeSingle()
+  if (!data) notFound()
+
+  return { userId: user.id }
 }
 
 export async function writeFeatureAudit(input: { action: 'grant' | 'revoke' | 'config_change' | 'tenant_preview'; tenantId?: string; featureKey?: string; before?: unknown; after?: unknown }) {

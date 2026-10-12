@@ -146,6 +146,72 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 /* The global `h1` rule is also unlayered, so heading sizes need to be set here. */
 .chat-title { margin: 0; color: var(--ink); font-size: 17px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em; }
 
+/* ---------------------------------------------------------------------------
+   Admin console — real, database-backed management of tenants, users and content
+--------------------------------------------------------------------------- */
+.admin-shell { display: flex; flex-direction: column; min-height: 100dvh; background: var(--paper); color: var(--ink); font-size: 14px; }
+.admin-shell-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid var(--line); background: var(--white); padding: 13px 20px; }
+.admin-ghost-button { display: inline-flex; align-items: center; border: 1px solid var(--line); background: var(--white); color: var(--ink-soft); padding: 8px 12px; font-size: 12px; font-weight: 600; text-decoration: none; }
+.admin-ghost-button:hover { background: var(--paper-deep); color: var(--ink); }
+.admin-shell-tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--line); background: var(--white); padding: 0 20px; }
+.admin-shell-tab { display: inline-flex; align-items: center; gap: 7px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--ink-soft); padding: 12px 10px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.admin-shell-tab:hover { color: var(--ink); }
+.admin-shell-tab.is-active { color: var(--evergreen); border-bottom-color: var(--coral); }
+.admin-shell-body { flex: 1; min-height: 0; }
+.admin-panel { display: flex; flex-direction: column; gap: 16px; max-width: 1020px; margin: 0 auto; padding: 22px 20px 64px; }
+.admin-card { border: 1px solid var(--line); background: var(--white); padding: 18px; }
+.admin-card-title { margin: 0; color: var(--ink); font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+.admin-card-hint { margin: 6px 0 0; color: var(--ink-soft); font-size: 12px; line-height: 1.5; }
+.admin-count { color: var(--coral); font-size: 12px; font-weight: 700; }
+.admin-empty { margin: 14px 0 0; color: var(--ink-soft); font-size: 12px; }
+.admin-error { margin: 12px 0 0; color: var(--coral); font-size: 12px; font-weight: 600; }
+.admin-success { margin: 12px 0 0; color: #47715b; font-size: 12px; font-weight: 600; }
+.admin-primary-button { display: inline-flex; align-items: center; gap: 7px; border: 0; background: var(--evergreen); color: var(--white); padding: 10px 16px; font-size: 13px; font-weight: 700; }
+.admin-primary-button:hover:not(:disabled) { background: #245445; }
+.admin-primary-button:disabled { opacity: .5; cursor: not-allowed; }
+.admin-danger-button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--white); color: var(--coral); padding: 6px 10px; font-size: 12px; font-weight: 600; }
+.admin-danger-button:hover:not(:disabled) { background: rgba(215,111,84,.08); }
+.admin-field { display: flex; flex-direction: column; gap: 6px; margin-top: 0; color: var(--ink-soft); font-size: 12px; font-weight: 600; }
+.admin-field input, .admin-field select, .admin-field textarea, .admin-textarea { width: 100%; border: 1px solid var(--line); background: var(--paper); color: var(--ink); padding: 9px 11px; }
+.admin-field textarea, .admin-textarea { resize: vertical; }
+.admin-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); padding: 12px 2px; }
+.admin-row:first-child { border-top: 0; }
+.admin-split { display: grid; grid-template-columns: 340px 1fr; min-height: calc(100dvh - 118px); }
+.admin-split-list { min-height: 0; overflow-y: auto; border-right: 1px solid var(--line); background: var(--white); }
+.admin-split-list-header { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--line); background: var(--white); padding: 12px; }
+.admin-search { display: flex; flex: 1; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--paper); padding: 0 10px; }
+.admin-search input { width: 100%; height: 34px; border: 0; background: transparent; color: var(--ink); outline: none; }
+.admin-user-row { display: flex; width: 100%; align-items: flex-start; gap: 10px; border: 0; border-bottom: 1px solid var(--line); background: transparent; padding: 12px; text-align: left; }
+.admin-user-row:hover { background: var(--paper-deep); }
+.admin-user-row.is-active { background: rgba(140,169,154,.18); }
+.admin-user-avatar { display: flex; width: 32px; height: 32px; flex: 0 0 32px; align-items: center; justify-content: center; border-radius: 9999px; background: rgba(140,169,154,.28); color: var(--evergreen); font-size: 11px; font-weight: 700; }
+.admin-split-detail { min-height: 0; overflow-y: auto; background: var(--paper); }
+.admin-check-row { display: flex; width: 100%; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--white); padding: 9px 11px; text-align: left; font-size: 12px; color: var(--ink-soft); }
+.admin-check-row.is-on { border-color: rgba(23,60,49,.35); background: rgba(140,169,154,.16); color: var(--ink); font-weight: 600; }
+.admin-check-box { display: flex; width: 15px; height: 15px; flex: 0 0 15px; align-items: center; justify-content: center; border: 1px solid var(--line); background: var(--white); color: var(--white); }
+.admin-check-box.is-on { border-color: var(--evergreen); background: var(--evergreen); }
+@media (max-width: 900px) { .admin-split { grid-template-columns: 1fr; } .admin-split-list { border-right: 0; border-bottom: 1px solid var(--line); } }
+
+/* ---------------------------------------------------------------------------
+   Workspace — tenant-scoped content. Class-based (not utilities) because the
+   global element rules in this file are unlayered and outrank Tailwind.
+--------------------------------------------------------------------------- */
+.ws-shell { font-size: 14px; }
+.ws-title { margin: 0; color: var(--ink); font-size: 22px; font-weight: 700; letter-spacing: -.03em; }
+.ws-subtitle { margin: 6px 0 0; color: var(--ink-soft); font-size: 12px; }
+.ws-count { color: var(--coral); font-size: 12px; font-weight: 700; }
+.ws-nav-item { display: flex; width: 100%; align-items: center; gap: 9px; border: 0; background: transparent; color: var(--ink-soft); padding: 9px 10px; text-align: left; font-size: 13px; font-weight: 600; }
+.ws-nav-item:hover { background: var(--paper-deep); color: var(--ink); }
+.ws-nav-item.is-active { background: rgba(140,169,154,.2); color: var(--evergreen); }
+.ws-nav-count { margin-left: auto; color: var(--ink-soft); font-size: 11px; font-weight: 700; }
+.ws-search { display: flex; max-width: 380px; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--white); padding: 0 11px; }
+.ws-search input { width: 100%; height: 36px; border: 0; background: transparent; color: var(--ink); outline: none; }
+.ws-table-wrap { overflow-x: auto; border: 1px solid var(--line); background: var(--white); }
+.ws-table { width: 100%; min-width: 820px; border-collapse: collapse; font-size: 12px; }
+.ws-table th { height: 36px; padding: 0 14px; border-bottom: 1px solid var(--line); color: var(--ink-soft); text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.ws-table td { padding: 11px 14px; border-bottom: 1px solid var(--line); color: var(--ink-soft); }
+.ws-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--evergreen); }
+
 a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--coral); outline-offset: 3px; }
 .auth-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: rgba(23,33,29,.42); }
 .auth-card { position: relative; display: flex; width: min(420px, 100%); flex-direction: column; gap: 14px; padding: 34px; background: var(--paper); box-shadow: 15px 18px 0 rgba(23,60,49,.18); }

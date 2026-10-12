@@ -9,7 +9,7 @@
 - Package manager: **pnpm**.
 
 # Library Rules
-- **Routing:** Use the Next.js App Router only (files under `app/`). Never add React Router or another client-side router. Routes: `app/page.tsx` (marketing + workspace), `app/admin/page.tsx`, `app/platform/page.tsx`, `app/workspace/[feature]/page.tsx`, and `app/auth/callback/route.ts`.
+- **Routing:** Use the Next.js App Router only (files under `app/`). Never add React Router or another client-side router. Routes: `app/page.tsx` (marketing + auth), `app/workspace/page.tsx` (real, tenant-scoped workspace), `app/chat/page.tsx` (Chat with Home), `app/admin/page.tsx` (platform-admin console), `app/platform/page.tsx`, `app/workspace/[feature]/page.tsx`, and `app/auth/callback/route.ts`.
 - **UI components:** Reuse existing shadcn/ui components from `components/ui` first. Add new shadcn components in the `base-nova` style rather than hand-rolling primitives. Do **not** edit files in `components/ui` directly — wrap them in `components/` or the page instead.
 - **Styling:** Use Tailwind CSS utility classes and the design tokens in `app/globals.css`. Reuse the existing semantic classes (e.g. `site-shell`, `workspace`, `panel-kicker`) for consistency; avoid new global CSS files and inline styles.
 - **Class names:** Use `cn()` from `@/lib/utils` for conditional or merged Tailwind classes; don't concatenate class strings by hand.
