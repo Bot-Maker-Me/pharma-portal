@@ -64,14 +64,24 @@ create or replace function public.is_platform_admin() returns boolean language s
   select exists (select 1 from public.platform_admins where user_id = (select auth.uid()));
 $$;
 
+-- Policies are dropped first so this migration can be re-run safely.
+drop policy if exists features_read_active on public.features;
 create policy features_read_active on public.features for select to authenticated using (is_active = true or (select public.is_platform_admin()));
+drop policy if exists features_platform_write on public.features;
 create policy features_platform_write on public.features for all to authenticated using ((select public.is_platform_admin())) with check ((select public.is_platform_admin()));
+drop policy if exists tenants_member_read on public.tenants;
 create policy tenants_member_read on public.tenants for select to authenticated using (exists (select 1 from public.tenant_members m where m.tenant_id = id and m.user_id = (select auth.uid()) and m.is_active));
+drop policy if exists members_self_read on public.tenant_members;
 create policy members_self_read on public.tenant_members for select to authenticated using (user_id = (select auth.uid()) or (select public.is_platform_admin()));
+drop policy if exists tenant_features_member_read on public.tenant_features;
 create policy tenant_features_member_read on public.tenant_features for select to authenticated using (enabled and exists (select 1 from public.tenant_members m where m.tenant_id = tenant_id and m.user_id = (select auth.uid()) and m.is_active));
+drop policy if exists tenant_features_platform_write on public.tenant_features;
 create policy tenant_features_platform_write on public.tenant_features for all to authenticated using ((select public.is_platform_admin())) with check ((select public.is_platform_admin()));
+drop policy if exists platform_admins_self_read on public.platform_admins;
 create policy platform_admins_self_read on public.platform_admins for select to authenticated using (user_id = (select auth.uid()));
+drop policy if exists audit_platform_read on public.feature_audit_log;
 create policy audit_platform_read on public.feature_audit_log for select to authenticated using ((select public.is_platform_admin()));
+drop policy if exists audit_platform_insert on public.feature_audit_log;
 create policy audit_platform_insert on public.feature_audit_log for insert to authenticated with check ((select public.is_platform_admin()) and actor_id = (select auth.uid()));
 
 insert into public.features (key, name, description, type) values
@@ -79,3 +89,15 @@ insert into public.features (key, name, description, type) values
 ('sops', 'SOPs & Policies', 'Searchable procedures and policy versions.', 'base'),
 ('opening-closing', 'Opening / Closing', 'Daily opening and closing checklists.', 'base')
 on conflict (key) do update set name = excluded.name, description = excluded.description;
+
+-- Privileges. Row level security still decides what each row a caller may touch;
+-- these grants only make the tables reachable at all.
+grant usage on schema public to anon, authenticated;
+
+grant select on public.features, public.tenants, public.tenant_members,
+  public.tenant_features, public.platform_admins, public.feature_audit_log
+  to authenticated;
+grant insert, update, delete on public.features, public.tenant_features to authenticated;
+grant insert on public.feature_audit_log to authenticated;
+
+grant execute on function public.is_platform_admin() to anon, authenticated;
