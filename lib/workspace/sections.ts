@@ -22,7 +22,11 @@ export const workspaceSections: WorkspaceSection[] = [
   { key: 'staff', label: 'Staff Schedule', hint: 'Team members and their shifts.' },
   { key: 'emergency', label: 'Emergency Contact List', hint: 'After-hours, prescriber and manager contacts.' },
   { key: 'standards', label: 'Standards of Procedure', hint: 'Standard operating procedures and policies.' },
-  { key: 'support', label: 'Support Resources', hint: 'Prescription data-entry reference material.' },
+  {
+    key: 'support',
+    label: 'Prescription Data Entry Support Resources',
+    hint: 'Prescription data-entry reference material.',
+  },
   { key: 'forms', label: 'Third Party Forms', hint: 'Claim forms, links and downloads.' },
 ]
 

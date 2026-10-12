@@ -94,6 +94,12 @@ export async function createTenant(name: string): Promise<void> {
   if (error) fail(error)
 }
 
+/** Removes a pharmacy workspace. Its content and memberships cascade away with it. */
+export async function deleteTenant(tenantId: string): Promise<void> {
+  const { error } = await db().from('tenants').delete().eq('id', tenantId)
+  if (error) fail(error)
+}
+
 export async function createHome(name: string): Promise<void> {
   const { error } = await db().from('homes').insert({ name })
   if (error) fail(error)
