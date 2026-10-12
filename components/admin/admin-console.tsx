@@ -102,6 +102,15 @@ export function AdminConsole({ adminEmail }: { adminEmail: string }) {
               <p className="text-sm font-semibold text-ink">Could not load the admin console</p>
               <p className="mt-1 text-xs text-ink-soft">{error}</p>
             </div>
+            {(error.includes('admin_list_users') ||
+              error.includes('schema cache') ||
+              error.includes('does not exist')) && (
+              <p className="text-xs leading-relaxed text-ink-soft">
+                The database is missing objects this console needs — usually because{' '}
+                <code className="font-mono">20261003000000_tenant_workspace.sql</code> has not been
+                applied to this project yet. Run it in the Supabase SQL Editor, then try again.
+              </p>
+            )}
             <button type="button" onClick={() => void reload()} className="admin-primary-button">
               Try again
             </button>
