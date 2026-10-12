@@ -49,13 +49,24 @@ export async function requirePlatformAdmin() {
   return context
 }
 
+export type PlatformAdminGate =
+  | { ok: true; userId: string }
+  | { ok: false; reason: 'unconfigured' | 'not-admin'; email: string | null }
+
 /**
  * Platform-admin gate that does NOT require tenant membership — used by the
  * admin console, which manages tenants rather than belonging to one.
- * Signed-out visitors are sent to the sign-in page; everyone else gets a 404.
+ *
+ * Signed-out visitors are redirected to sign-in. A signed-in visitor who is not
+ * a platform admin gets a denied result instead of a bare 404, so the console can
+ * say exactly why: which account is signed in and which Supabase project was
+ * consulted. Access is refused either way — the difference is only that the
+ * refusal is legible.
  */
-export async function requirePlatformAdminOnly(): Promise<{ userId: string }> {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) notFound()
+export async function requirePlatformAdminOnly(): Promise<PlatformAdminGate> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return { ok: false, reason: 'unconfigured', email: null }
+  }
 
   const supabase = await createClient()
   const {
@@ -64,9 +75,9 @@ export async function requirePlatformAdminOnly(): Promise<{ userId: string }> {
   if (!user) redirect('/')
 
   const { data } = await supabase.from('platform_admins').select('user_id').eq('user_id', user.id).maybeSingle()
-  if (!data) notFound()
+  if (!data) return { ok: false, reason: 'not-admin', email: user.email ?? null }
 
-  return { userId: user.id }
+  return { ok: true, userId: user.id }
 }
 
 export async function writeFeatureAudit(input: { action: 'grant' | 'revoke' | 'config_change' | 'tenant_preview'; tenantId?: string; featureKey?: string; before?: unknown; after?: unknown }) {
