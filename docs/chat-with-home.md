@@ -19,9 +19,13 @@ idempotent — safe to apply to the existing Nursing Home Portal project.
 | `conversation_reads` | `(conversation_id, user_id) → last_read_at` — powers read receipts + unread counts. |
 
 Helpers: `can_access_home()`, `can_access_conversation()`, `pharmacy_has_home()`,
-`chat_conversation_summaries()` (list with unread counts).
+`user_home_id()`.
 
 Realtime is enabled on `messages`, `conversations` and `conversation_reads`.
+
+The Pharma Portal reads these tables **directly** — no database functions/RPCs — so it
+only needs `SELECT`/`INSERT` grants plus the RLS policies. If the tables already existed
+(they do in the Nursing Home Portal project) the migration adds any missing columns.
 
 ## Access model
 

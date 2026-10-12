@@ -40,8 +40,9 @@ export default async function ChatPage() {
       configured,
       signedIn: true,
       userId: user.id,
-      displayName: profile?.full_name ?? user.email?.split('@')[0] ?? 'Pharmacy team',
-      organization: profile?.organization ?? null,
+      // `||` (not `??`) so an empty full_name falls through to the email prefix.
+      displayName: profile?.full_name?.trim() || user.email?.split('@')[0] || 'Pharmacy team',
+      organization: profile?.organization?.trim() || null,
     }
   }
 

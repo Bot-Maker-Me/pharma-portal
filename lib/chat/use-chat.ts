@@ -94,6 +94,23 @@ export function useChatData(): ChatController {
     }
   }, [backend])
 
+  // Realtime can fire several events at once — coalesce them into one reload.
+  const refreshTimer = useRef<number | null>(null)
+  const scheduleRefresh = useCallback(() => {
+    if (refreshTimer.current !== null) window.clearTimeout(refreshTimer.current)
+    refreshTimer.current = window.setTimeout(() => {
+      refreshTimer.current = null
+      void refreshSummaries()
+    }, 250)
+  }, [refreshSummaries])
+
+  useEffect(
+    () => () => {
+      if (refreshTimer.current !== null) window.clearTimeout(refreshTimer.current)
+    },
+    [],
+  )
+
   // Initial load of authorized homes + conversation summaries.
   useEffect(() => {
     if (!backend) return
@@ -191,20 +208,20 @@ export function useChatData(): ChatController {
             current.some((item) => item.id === message.id) ? current : [...current, message],
           )
           if (message.senderId !== selfIdRef.current) {
-            void backend.markRead(message.conversationId).then(refreshSummaries).catch(() => undefined)
+            void backend.markRead(message.conversationId).then(scheduleRefresh).catch(() => undefined)
           }
         }
-        void refreshSummaries()
+        scheduleRefresh()
       },
       onConversationChange: () => {
-        void refreshSummaries()
+        scheduleRefresh()
       },
       onReadChange: (read) => {
         if (read.conversationId !== activeConversationRef.current) return
         setReads((current) => [...current.filter((item) => item.userId !== read.userId), read])
       },
     })
-  }, [backend, refreshSummaries])
+  }, [backend, refreshSummaries, scheduleRefresh])
 
   const selectHome = useCallback((homeId: string) => {
     setActiveHomeId(homeId)
