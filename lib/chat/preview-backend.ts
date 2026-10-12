@@ -18,8 +18,6 @@ import type {
 // side replying. Once NEXT_PUBLIC_SUPABASE_URL / ANON_KEY are set, this is never
 // used.
 
-const PHARMACY_USER_ID = 'preview-pharmacy-user'
-const HOME_USER_ID = 'preview-home-user'
 const PHARMACY_NAME = 'Jordan Davis'
 
 const now = Date.now()
@@ -78,10 +76,10 @@ function message(
   return {
     id: nextId('m'),
     conversationId,
-    senderId: fromPharmacy ? PHARMACY_USER_ID : HOME_USER_ID,
     senderName: fromPharmacy ? PHARMACY_NAME : threads.find((t) => t.id === conversationId)?.homeName ?? 'Nursing home',
     body,
     urgency,
+    fromPharmacy,
     readAt,
     createdAt,
   }
@@ -132,10 +130,6 @@ const messages: ChatMessage[] = [
 
 const listeners = new Set<ChatSubscriptionHandlers>()
 
-function fromPharmacy(item: ChatMessage): boolean {
-  return item.senderId === PHARMACY_USER_ID
-}
-
 function emitMessage(item: ChatMessage) {
   listeners.forEach((listener) => listener.onMessage(item))
 }
@@ -156,7 +150,7 @@ function markThreadRead(conversationId: string, readerIsPharmacy: boolean) {
   messages.forEach((item) => {
     if (item.conversationId !== conversationId || item.readAt) return
     // Only the messages written by the *other* side get a read receipt.
-    if (fromPharmacy(item) === readerIsPharmacy) return
+    if (item.fromPharmacy === readerIsPharmacy) return
     item.readAt = at
     changed = true
   })
@@ -170,7 +164,7 @@ function summarize(): ConversationSummary[] {
         .filter((item) => item.conversationId === thread.id)
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
       const last = threadMessages[threadMessages.length - 1] ?? null
-      const unread = threadMessages.filter((item) => !fromPharmacy(item) && !item.readAt)
+      const unread = threadMessages.filter((item) => !item.fromPharmacy && !item.readAt)
       return {
         conversationId: thread.id,
         homeId: thread.homeId,
@@ -199,7 +193,7 @@ export function createPreviewChatBackend(): ChatBackend {
     mode: 'preview',
 
     async load(): Promise<ChatSnapshot> {
-      return { selfUserId: PHARMACY_USER_ID, homes, conversations: summarize() }
+      return { homes, conversations: summarize() }
     },
 
     async loadMessages(conversationId: string): Promise<ChatMessage[]> {

@@ -30,25 +30,13 @@ export default function Page() {
   const [hasScrolled, setHasScrolled] = useState(false)
 
   useEffect(() => {
+    // Section reveals are pure CSS (see globals.css) so nothing can be left
+    // invisible if this script never runs.
     const onScroll = () => setHasScrolled(window.scrollY > 24)
-    const featureArticles = Array.from(document.querySelectorAll('.feature-strip article'))
-    const observer = new IntersectionObserver(
-      (items) => {
-        items.forEach((item) => {
-          if (item.isIntersecting) {
-            item.target.classList.add('is-visible')
-            observer.unobserve(item.target)
-          }
-        })
-      },
-      { threshold: 0.18 },
-    )
-    featureArticles.forEach((article) => observer.observe(article))
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => {
       window.removeEventListener('scroll', onScroll)
-      observer.disconnect()
     }
   }, [])
 
@@ -112,6 +100,10 @@ export default function Page() {
             <button type="button" className="close-panel" onClick={() => setAuthMode(null)} aria-label="Close">
               ×
             </button>
+            <div className="auth-brand">
+              <span className="wordmark-mark">+</span>
+              <span>formulary</span>
+            </div>
             <p className="eyebrow">FORMULARY ACCESS</p>
             <h2>{authMode === 'sign-up' ? 'Create your account' : 'Welcome back'}</h2>
             <p className="panel-subtitle">Use your pharmacy account to manage medicines and formulary rules.</p>

@@ -43,10 +43,15 @@ export type ConversationSummary = {
 export type ChatMessage = {
   id: string
   conversationId: string
-  senderId: string
   senderName: string
   body: string
   urgency: Urgency
+  /**
+   * True when the pharmacy sent it (portal_messages.sender_role !== 'home').
+   * This — not the user id — decides which side of the thread a message sits on:
+   * the same account can be signed into both portals while testing.
+   */
+  fromPharmacy: boolean
   /** When the other side opened the message (portal_messages.read_at). */
   readAt: string | null
   createdAt: string
@@ -67,8 +72,6 @@ export type NewConversationInput = {
 }
 
 export type ChatSnapshot = {
-  /** The signed-in user's id, used to tell "my" messages from the home's. */
-  selfUserId: string | null
   homes: AuthorizedHome[]
   conversations: ConversationSummary[]
 }

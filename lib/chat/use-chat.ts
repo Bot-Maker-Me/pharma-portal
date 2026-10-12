@@ -27,7 +27,6 @@ export type ChatController = {
   threadError: string | null
   sending: boolean
   sendError: string | null
-  selfUserId: string | null
   selectConversation: (conversationId: string) => void
   startConversation: (homeId: string) => void
   sendMessage: (input: Omit<SendMessageInput, 'conversationId'>) => Promise<boolean>
@@ -51,7 +50,6 @@ export function useChatData(): ChatController {
 
   const [status, setStatus] = useState<LoadStatus>('loading')
   const [error, setError] = useState<string | null>(null)
-  const [selfUserId, setSelfUserId] = useState<string | null>(null)
   const [homes, setHomes] = useState<AuthorizedHome[]>([])
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
@@ -63,12 +61,7 @@ export function useChatData(): ChatController {
   const [sendError, setSendError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
 
-  const selfIdRef = useRef<string | null>(null)
   const activeConversationRef = useRef<string | null>(null)
-
-  useEffect(() => {
-    selfIdRef.current = selfUserId
-  }, [selfUserId])
 
   useEffect(() => {
     activeConversationRef.current = activeConversationId
@@ -118,7 +111,6 @@ export function useChatData(): ChatController {
       .load()
       .then((snapshot) => {
         if (cancelled) return
-        setSelfUserId(snapshot.selfUserId)
         setHomes(snapshot.homes)
         setConversations(snapshot.conversations)
         setStatus('ready')
@@ -182,7 +174,8 @@ export function useChatData(): ChatController {
           setMessages((current) =>
             current.some((item) => item.id === message.id) ? current : [...current, message],
           )
-          if (message.senderId !== selfIdRef.current) {
+          // A message from the home side is ours to mark read.
+          if (!message.fromPharmacy) {
             void backend.markRead(message.conversationId).then(scheduleRefresh).catch(() => undefined)
           }
         }
@@ -284,7 +277,6 @@ export function useChatData(): ChatController {
     threadError,
     sending,
     sendError,
-    selfUserId,
     selectConversation,
     startConversation,
     sendMessage,

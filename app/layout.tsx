@@ -3,9 +3,9 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
+  title: 'Formulary — pharmacy workspace & Chat with Home',
+  description:
+    'A focused workspace for pharmacy formularies, plus secure real-time messaging between your pharmacy and the nursing homes you serve.',
   icons: {
     icon: [
       {
@@ -26,11 +26,11 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'light dark',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: 'white' },
-    { media: '(prefers-color-scheme: dark)', color: 'black' },
-  ],
+  // The product is a light, paper-toned theme with no dark variant. Declaring
+  // light keeps the browser from painting native controls (inputs, selects,
+  // scrollbars) in dark mode, which is what made sign-in fields look blank.
+  colorScheme: 'light',
+  themeColor: '#f4f1e9',
 }
 
 export default function RootLayout({

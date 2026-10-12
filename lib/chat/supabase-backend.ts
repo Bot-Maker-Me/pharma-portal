@@ -84,10 +84,11 @@ function mapMessage(row: PortalMessageRow): ChatMessage {
   return {
     id: row.id,
     conversationId: row.thread_id ?? '',
-    senderId: row.user_id,
     senderName: row.sender_name,
     body: row.body,
     urgency: toUrgency(row.urgent),
+    // sender_role is the authoritative "which side" flag — never the user id.
+    fromPharmacy: row.sender_role !== SENDER_ROLE_HOME,
     readAt: row.read_at,
     createdAt: row.created_at,
   }
@@ -120,9 +121,6 @@ export function createSupabaseChatBackend(): ChatBackend {
     mode: 'live',
 
     async load(): Promise<ChatSnapshot> {
-      const { data: userData } = await supabase.auth.getUser()
-      const selfUserId = userData.user?.id ?? null
-
       const [homesResult, threadsResult, messagesResult] = await Promise.all([
         supabase.from('homes').select('id, name').order('name', { ascending: true }),
         supabase
@@ -158,7 +156,7 @@ export function createSupabaseChatBackend(): ChatBackend {
         })
         .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))
 
-      return { selfUserId, homes, conversations: summaries }
+      return { homes, conversations: summaries }
     },
 
     async loadMessages(conversationId: string): Promise<ChatMessage[]> {

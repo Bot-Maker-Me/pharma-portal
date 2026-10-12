@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { ChevronLeft, Hash, ShieldCheck, TriangleAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatDayLabel, formatFullTimestamp, formatMessageTime, isSameDay } from '@/lib/chat/format'
+import { formatDayLabel, formatFullTimestamp, formatMessageTime, initialsFromName, isSameDay } from '@/lib/chat/format'
 import { urgencyMeta } from '@/lib/chat/urgency'
 import type { ChatMessage, SendMessageInput } from '@/lib/chat/types'
 import { ChatErrorState, ChatLoadingState, ThreadStartState } from './chat-states'
@@ -15,7 +15,6 @@ type MessageThreadProps = {
   conversationTitle: string | null
   residentRef: string | null
   messages: ChatMessage[]
-  selfUserId: string | null
   status: ThreadStatus
   error: string | null
   onRetry: () => void
@@ -31,7 +30,6 @@ export function MessageThread({
   conversationTitle,
   residentRef,
   messages,
-  selfUserId,
   status,
   error,
   onRetry,
@@ -118,14 +116,29 @@ export function MessageThread({
 
               <div className="flex flex-col gap-3">
                 {group.messages.map((message) => {
-                  const isMine = message.senderId === selfUserId
+                  // The pharmacy's messages sit on the right, the home's on the left.
+                  const isMine = message.fromPharmacy
                   const meta = urgencyMeta[message.urgency]
                   // Read receipts come straight from the message row (read_at).
                   const isRead = Boolean(message.readAt)
                   const flagged = message.urgency !== 'routine'
                   return (
-                    <div key={message.id} className={cn('chat-message flex', isMine ? 'justify-end' : 'justify-start')}>
-                      <div className="max-w-[min(34rem,85%)]">
+                    <div
+                      key={message.id}
+                      className={cn(
+                        'chat-message flex items-end gap-2',
+                        isMine ? 'justify-end' : 'justify-start',
+                      )}
+                    >
+                      {!isMine && (
+                        <span
+                          className="mb-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-sage/25 text-[10px] font-bold text-evergreen"
+                          aria-hidden="true"
+                        >
+                          {initialsFromName(message.senderName)}
+                        </span>
+                      )}
+                      <div className="max-w-[min(34rem,80%)]">
                         {!isMine && (
                           <p className="mb-1 pl-1 text-[11px] font-semibold text-ink-soft">{message.senderName}</p>
                         )}

@@ -102,7 +102,6 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
               conversationTitle={chat.activeSummary?.title ?? null}
               residentRef={chat.activeSummary?.residentRef ?? null}
               messages={chat.messages}
-              selfUserId={chat.selfUserId}
               status={chat.threadStatus}
               error={chat.threadError}
               onRetry={chat.retry}
