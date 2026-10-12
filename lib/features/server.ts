@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { FeatureGrant, TenantContext } from './registry'
 
-const baseFeatureKeys = new Set(['formulary', 'sops', 'opening-closing', 'blister-pack-tracker', 'delivery-slips', 'signing-sheet', 'vaccine-wait-list'])
+const baseFeatureKeys = new Set(['formulary', 'sops', 'opening-closing', 'blister-pack-tracker', 'delivery-slips', 'signing-sheet', 'vaccine-wait-list', 'chat-with-home'])
 
 export async function getSessionTenant(): Promise<TenantContext | null> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null

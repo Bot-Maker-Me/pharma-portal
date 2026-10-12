@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { read, utils } from 'xlsx'
+import { MessagesSquare } from 'lucide-react'
 import { createClient as createSupabaseClient } from '@/lib/supabase/client'
 
 type Entry = [string, string, string, string, string, string]
@@ -153,10 +155,22 @@ export default function Page() {
       <nav className={`topbar ${hasScrolled ? 'is-scrolled' : ''}`} aria-label="Main navigation">
         <a className="wordmark" href="#top" aria-label="Formulary home"><span className="wordmark-mark">+</span> formulary</a>
         <div className="nav-links">
-          <a href="#how-it-works">How it works</a>
-          <a href="#security">Audit trail</a>
-          <button className="nav-signin" onClick={() => { setAuthMode('sign-in'); setAuthError('') }}>Sign in</button>
-          <button className="nav-cta" onClick={() => { setAuthMode('sign-in'); setAuthError('') }}>Get started <span aria-hidden="true">↗</span></button>
+          {signedIn ? (
+            <>
+              <Link className="nav-chat" href="/chat">
+                <MessagesSquare className="nav-chat-icon" aria-hidden="true" />
+                Chat with Home
+              </Link>
+              <button className="nav-signin" onClick={() => setSignedIn(false)}>Sign out</button>
+            </>
+          ) : (
+            <>
+              <a href="#how-it-works">How it works</a>
+              <a href="#security">Audit trail</a>
+              <button className="nav-signin" onClick={() => { setAuthMode('sign-in'); setAuthError('') }}>Sign in</button>
+              <button className="nav-cta" onClick={() => { setAuthMode('sign-in'); setAuthError('') }}>Get started <span aria-hidden="true">↗</span></button>
+            </>
+          )}
         </div>
       </nav>
 
@@ -167,6 +181,7 @@ export default function Page() {
             <div className="tenant-label">CURRENT PHARMACY</div>
             <div className="tenant-name">Northside Pharmacy <span>⌄</span></div>
             <div className="sidebar-nav">
+              <Link className="sidebar-item sidebar-link" href="/chat"><MessagesSquare className="sidebar-icon" aria-hidden="true" /> <span>Chat with Home</span></Link>
               <button className={`sidebar-item ${activeView === 'formulary' ? 'active' : ''}`} onClick={() => setActiveView('formulary')}>▦ <span>Formulary</span></button>
               <button className={`sidebar-item ${activeView === 'opening' ? 'active' : ''}`} onClick={() => setActiveView('opening')}>□ <span>Opening Procedure</span></button>
               <button className={`sidebar-item ${activeView === 'closing' ? 'active' : ''}`} onClick={() => setActiveView('closing')}>□ <span>Closing Procedure</span></button>

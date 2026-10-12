@@ -104,8 +104,41 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 @media (max-width: 900px) { .hero { grid-template-columns: 1fr; padding-top: 55px; }.hero-copy { max-width: 650px; }.preview-frame { transform: none; }.trust-line { margin-top: 45px; }.app-sidebar { width: 185px; flex-basis: 185px; }.detail-panel { width: 280px; flex-basis: 280px; } }
 @media (max-width: 680px) { .topbar { padding: 20px; }.nav-links a, .nav-signin { display: none; }.nav-links { gap: 0; }.hero { padding: 45px 20px 70px; }.hero h1 { font-size: 55px; }.trust-line { flex-wrap: wrap; line-height: 1.5; }.feature-strip { grid-template-columns: 1fr; }.feature-strip article { border-right: 0; border-bottom: 1px solid var(--line); padding: 28px 20px; }.feature-strip article:last-child { border-bottom: 0; }footer { flex-direction: column; gap: 13px; }.app-preview { min-width: 980px; }.app-preview-full { min-height: calc(100vh - 66px); }.workspace { padding: 25px 20px; }.detail-panel { position: fixed; right: 0; top: 0; z-index: 4; height: 100vh; width: min(320px, 90vw); }.workspace-header { align-items: flex-start; }.header-actions { display: none; } }
 
-@theme inline { --color-background: var(--paper); --color-foreground: var(--ink); --color-border: var(--line); }
+@theme inline {
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
+  --color-border: var(--line);
+  /* Design tokens exposed as Tailwind utilities (bg-evergreen, text-coral, border-line, …) */
+  --color-paper: var(--paper);
+  --color-paper-deep: var(--paper-deep);
+  --color-surface: var(--white);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-evergreen: var(--evergreen);
+  --color-sage: var(--sage);
+  --color-coral: var(--coral);
+  --color-line: var(--line);
+}
 @layer base { * { border-color: var(--line); } }
+
+/* ---------------------------------------------------------------------------
+   Chat with Home — shared messaging between the Pharma and Nursing Home portals
+--------------------------------------------------------------------------- */
+.nav-chat { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--evergreen); background: var(--evergreen); color: var(--white); padding: 11px 18px; font-size: 13px; font-weight: 700; text-decoration: none; transition: transform .18s ease, background-color .2s ease; }
+.nav-chat:hover { background: #245445; }
+.nav-chat:active { transform: scale(.98); }
+.nav-chat-icon { width: 15px; height: 15px; flex: 0 0 auto; }
+.nav-links .nav-chat { display: inline-flex; }
+.sidebar-link { text-decoration: none; }
+.sidebar-link:hover { color: var(--white); background: rgba(255,255,255,.08); }
+.sidebar-icon { width: 15px; height: 15px; flex: 0 0 auto; }
+.chat-scroll { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.chat-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.chat-scroll::-webkit-scrollbar-track { background: transparent; }
+.chat-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 9999px; }
+.chat-scroll::-webkit-scrollbar-thumb:hover { background: var(--sage); }
+.chat-message { animation: chat-message-in .22s ease-out both; }
+@keyframes chat-message-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
 a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--coral); outline-offset: 3px; }
 .auth-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: rgba(23,33,29,.42); }

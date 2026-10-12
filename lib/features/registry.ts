@@ -21,6 +21,7 @@ export const featureRegistry: FeatureDefinition[] = [
   { key: 'delivery-slips', name: 'Delivery Slips', description: 'Prepare and manage delivery slips.', type: 'base', sidebar: { label: 'Delivery Slips', icon: 'truck', route: '/workspace/delivery-slips' }, route: '/workspace/delivery-slips' },
   { key: 'signing-sheet', name: 'Signing Sheet', description: 'Daily sign-off records.', type: 'base', sidebar: { label: 'Signing Sheet', icon: 'pen', route: '/workspace/signing-sheet' }, route: '/workspace/signing-sheet' },
   { key: 'vaccine-wait-list', name: 'Vaccine Wait List', description: 'Manage vaccine requests and wait lists.', type: 'base', sidebar: { label: 'Vaccine Wait List', icon: 'syringe', route: '/workspace/vaccine-wait-list' }, route: '/workspace/vaccine-wait-list' },
+  { key: 'chat-with-home', name: 'Chat with Home', description: 'Secure messaging with the nursing homes you serve.', type: 'base', sidebar: { label: 'Chat with Home', icon: 'message', route: '/chat' }, route: '/chat' },
 ]
 
 export function getFeature(featureKey: string) { return featureRegistry.find((feature) => feature.key === featureKey) }
