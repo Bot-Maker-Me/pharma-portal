@@ -108,7 +108,7 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 .sidebar-link { text-decoration: none; }
 .sidebar-link:hover { color: var(--white); background: rgba(255,255,255,.08); }
 .sidebar-icon { width: 15px; height: 15px; flex: 0 0 auto; }
-.chat-scroll { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.chat-scroll { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .chat-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
 .chat-scroll::-webkit-scrollbar-track { background: transparent; }
 .chat-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 9999px; }
@@ -118,7 +118,21 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 /* Sets the base size chat controls inherit. The global `button, input { font: inherit }`
    rule is unlayered, so it outranks Tailwind's font utilities — controls take their size
    from here instead. */
-.chat-shell { font-size: 14px; }
+.chat-shell { display: flex; height: 100dvh; flex-direction: column; overflow: hidden; font-size: 14px; }
+/* WhatsApp-style containment: the shell is exactly one viewport tall and never
+   grows, the two panes fill what is left of it, and only the message list (and
+   the conversation list) scroll. The page itself never scrolls. */
+.chat-body { display: grid; min-height: 0; flex: 1; overflow: hidden; }
+.chat-list-pane { display: flex; min-height: 0; flex-direction: column; overflow: hidden; }
+.chat-thread-pane { display: flex; min-height: 0; flex-direction: column; overflow: hidden; }
+/* Phones show one pane at a time; from 768px both sit side by side. Class-based,
+   because the unlayered rules in this file outrank Tailwind's `hidden`. */
+.chat-pane-off { display: none; }
+@media (min-width: 768px) {
+  .chat-body { grid-template-columns: 20rem minmax(0, 1fr); }
+  .chat-list-pane { border-right: 1px solid var(--line); }
+  .chat-list-pane.chat-pane-off, .chat-thread-pane.chat-pane-off { display: flex; }
+}
 /* The global `h1` rule is also unlayered, so heading sizes need to be set here. */
 .chat-title { margin: 0; color: var(--ink); font-size: 17px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em; }
 
@@ -288,3 +302,126 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 /* The original demo admin console's stylesheet was removed here. Its .admin-main,
    .admin-count, .admin-empty and .admin-success rules collided with the live admin
    console above, and nothing referenced any of its classes. */
+
+/* ---------------------------------------------------------------------------
+   Public site — the dark ledger theme.
+
+   Everything the public site renders (the marketing page and the sign-in card
+   it opens) sits inside `.site-theme`, which re-points the shared tokens to the
+   dark palette. The class-based marketing rules above therefore flip to dark
+   without being duplicated, and nothing outside the public site is touched.
+--------------------------------------------------------------------------- */
+.site-theme {
+  --paper: #0b1220;
+  --paper-deep: #131d30;
+  --ink: #ede6da;
+  --ink-soft: #98a4b7;
+  --evergreen: #ede6da;
+  --sage: #98a4b7;
+  --coral: #e0353f;
+  --line: rgba(237, 230, 218, .14);
+  --white: #131d30;
+  --red: #d8232f;
+  --red-deep: #a5121d;
+  --sheet: #ede6da;
+  --sheet-back: #dcd2c0;
+  --sheet-ink: #0b1220;
+  --nav-h: 74px;
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+}
+.site-theme .site-shell { background: var(--paper); }
+
+/* Nav + brand. */
+.site-theme .topbar { height: var(--nav-h); padding: 0 clamp(20px, 4.5vw, 64px); }
+.site-theme .topbar.is-scrolled { border-color: var(--line); background: color-mix(in srgb, #0b1220 88%, transparent); box-shadow: none; backdrop-filter: blur(10px); }
+.site-theme .wordmark { color: var(--ink); }
+.site-theme .wordmark-mark { background: var(--red); color: #fff; }
+.site-theme .nav-links a:hover, .site-theme .nav-signin:hover { color: var(--ink); }
+.site-theme .nav-links a::after { background: var(--red); }
+.site-theme .nav-chat { border-color: rgba(237, 230, 218, .28); background: transparent; color: var(--ink); }
+.site-theme .nav-chat:hover { background: rgba(237, 230, 218, .09); }
+.site-theme .nav-cta, .site-theme .dark-button { background: var(--red); color: #fff; }
+.site-theme .nav-cta span, .site-theme .dark-button span { color: rgba(255, 255, 255, .8); }
+.site-theme .nav-cta:hover, .site-theme .dark-button:hover { background: var(--red-deep); }
+
+/* Hero — 7/5 above 1024px, stacked below it. */
+.site-theme .hero { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(32px, 4vw, 64px); align-items: center; max-width: 1320px; min-height: calc(100svh - var(--nav-h)); margin: 0 auto; padding: clamp(40px, 5vw, 72px) clamp(20px, 4.5vw, 64px) clamp(64px, 7vw, 104px); }
+.site-theme .hero-copy { max-width: 40rem; }
+.site-theme .hero-label { display: flex; align-items: center; gap: 12px; margin: 0; color: var(--ink-soft); font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; }
+.site-theme .hero-label::before { width: 26px; height: 1px; flex: 0 0 26px; background: var(--red); content: ''; }
+.site-theme .hero-title { margin: 22px 0 0; color: var(--ink); font-family: 'Bricolage Grotesque', Manrope, 'Helvetica Neue', sans-serif; font-size: clamp(2.1rem, 4.2vw, 4rem); font-weight: 800; line-height: .95; letter-spacing: -.03em; text-transform: uppercase; }
+.site-theme .hero-line { display: block; }
+.site-theme .hero-title em { color: transparent; font-style: normal; -webkit-text-stroke: 1.5px var(--sheet); }
+.site-theme .hero-description { max-width: 52ch; margin: 26px 0 0; color: var(--ink-soft); font-size: 17px; line-height: 1.6; }
+.site-theme .hero-actions { gap: 22px; margin-top: 34px; }
+.site-theme .solid-button { display: inline-flex; height: 48px; align-items: center; border: 0; border-radius: 2px; background: var(--red); padding: 0 22px; color: #fff; font-size: 15px; font-weight: 700; transition: background-color .2s ease; }
+.site-theme .solid-button:hover { background: var(--red-deep); }
+.site-theme .link-button { display: inline-flex; align-items: center; gap: 9px; color: var(--ink); font-size: 15px; font-weight: 600; text-decoration: none; }
+.site-theme .link-button span { color: var(--red); transition: transform .18s ease; }
+.site-theme .link-button:hover span { transform: translateX(3px); }
+
+/* Ledger sheet. The stack reserves a band above and below the sheet so the
+   floating chips never land on top of the table. */
+.site-theme .ledger-stack { position: relative; width: min(100%, clamp(320px, 42vw, 600px)); margin-left: auto; padding: 76px 0 168px; }
+.site-theme .ledger-sheets { position: relative; }
+.site-theme .ledger-sheet { border-radius: 2px; background: var(--sheet); color: var(--sheet-ink); }
+.site-theme .ledger-sheet-back { position: absolute; inset: 0; background: var(--sheet-back); transform: translate(12px, -12px) rotate(1deg); }
+.site-theme .ledger-sheet-front { position: relative; padding: 26px 28px 118px; box-shadow: 0 26px 60px rgba(0, 0, 0, .45); transform: rotate(-1.5deg); }
+.site-theme .ledger-table { width: 100%; min-width: 0; table-layout: fixed; border-collapse: collapse; color: var(--sheet-ink); font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; font-variant-numeric: tabular-nums; }
+.site-theme .ledger-table th { height: auto; padding: 0 0 12px; border-bottom: 1px solid rgba(11, 18, 32, .24); color: rgba(11, 18, 32, .6); font-size: 14px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+.site-theme .ledger-table td { height: auto; padding: 12px 0; border-bottom: 1px solid rgba(11, 18, 32, .13); color: var(--sheet-ink); }
+.site-theme .ledger-table tbody tr { cursor: default; }
+.site-theme .ledger-table tbody tr:hover { background: transparent; }
+.site-theme .ledger-table tr:last-child td { border-bottom: 0; }
+.site-theme .ledger-table th:last-child, .site-theme .ledger-table td:last-child { text-align: right; }
+.site-theme .ledger-col-date { width: 116px; }
+.site-theme .ledger-col-num { width: 46px; }
+.site-theme .ledger-col-bal { width: 56px; }
+.site-theme .ledger-date { padding-right: 24px; white-space: nowrap; }
+.site-theme .ledger-stamp { position: absolute; right: 12px; bottom: 14px; display: flex; width: 86px; height: 86px; align-items: center; justify-content: center; border: 2px solid var(--red); border-radius: 9999px; color: var(--red); font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; font-weight: 700; letter-spacing: .14em; transform: rotate(-12deg); }
+.site-theme .ledger-stamp::after { position: absolute; inset: 5px; border: 1px solid var(--red); border-radius: 9999px; content: ''; }
+.site-theme .ledger-chip { position: absolute; z-index: 2; max-width: 100%; border: 1px solid rgba(237, 230, 218, .2); border-radius: 12px; background: rgba(237, 230, 218, .07); padding: 10px 14px; color: var(--ink); font-size: 14px; line-height: 1.45; }
+.site-theme .ledger-chip-count { top: 0; right: 0; }
+.site-theme .ledger-chip-sign { bottom: 104px; left: 0; }
+.site-theme .ledger-chip-alert { bottom: 0; left: 0; border-left: 3px solid var(--red); }
+
+/* The other public sections keep their layout; only the palette flips. */
+.site-theme .feature-strip p { color: var(--ink-soft); font-size: 14px; }
+.site-theme .feature-number { color: var(--red); }
+.site-theme footer { color: var(--ink-soft); font-size: 13px; padding: 34px clamp(20px, 4.5vw, 64px); }
+.site-theme footer .wordmark { color: var(--ink); }
+.site-theme .text-link { color: var(--ink); font-size: 15px; }
+.site-theme .text-link span { color: var(--red); }
+.site-theme .eyebrow { color: var(--coral); font-size: 11px; letter-spacing: .14em; }
+.site-theme .eyebrow-line { background: var(--red); }
+
+/* Sign-in card: the cream ledger sheet, on the dark backdrop. */
+.site-theme .auth-backdrop { background: rgba(6, 10, 18, .74); }
+.site-theme .auth-card { gap: 15px; padding: 30px 28px 28px; border-color: rgba(11, 18, 32, .14); background: var(--sheet); color: var(--sheet-ink); box-shadow: 16px 18px 0 rgba(0, 0, 0, .4); }
+.site-theme .auth-brand { color: var(--red); }
+.site-theme .auth-card h2 { color: var(--sheet-ink); font-size: 30px; }
+.site-theme .auth-card label { color: rgba(11, 18, 32, .66); font-size: 13px; }
+.site-theme .auth-card input { border-color: rgba(11, 18, 32, .2); background: #f8f5ef; color: var(--sheet-ink); font-size: 15px; }
+.site-theme .auth-card .close-panel { color: rgba(11, 18, 32, .55); }
+.site-theme .auth-card .dark-button { background: var(--red); color: #fff; }
+.site-theme .auth-card .dark-button:hover { background: var(--red-deep); }
+.site-theme .auth-card .text-link { color: var(--sheet-ink); }
+.site-theme .auth-card .text-link span { color: var(--red); }
+.site-theme .panel-subtitle { color: #6c7583; font-size: 14px; }
+
+@media (max-width: 1023px) {
+  .site-theme .hero { grid-template-columns: minmax(0, 1fr); }
+  .site-theme .ledger-stack { width: min(100%, 600px); margin-inline: auto; }
+}
+@media (max-width: 680px) {
+  .site-theme .ledger-stack { padding: 68px 0 156px; }
+  .site-theme .ledger-sheet-front { padding: 20px 16px 104px; }
+  .site-theme .ledger-col-date { width: 88px; }
+  .site-theme .ledger-col-num { width: 38px; }
+  .site-theme .ledger-col-bal { width: 46px; }
+  .site-theme .ledger-date { padding-right: 14px; }
+  .site-theme .ledger-stamp { width: 74px; height: 74px; font-size: 10px; }
+  .site-theme .ledger-chip-sign { bottom: 96px; }
+}

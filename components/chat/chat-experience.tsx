@@ -32,7 +32,7 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
   }
 
   return (
-    <div className={cn('chat-shell flex h-dvh flex-col bg-paper', tenantThemeClass(identity.theme))}>
+    <div className={cn('chat-shell bg-paper', tenantThemeClass(identity.theme))}>
       <header className="flex items-center gap-3 border-b border-line bg-surface px-4 py-3 sm:px-6">
         <Link
           href="/"
@@ -77,13 +77,8 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
         </div>
       )}
 
-      <div className="grid min-h-0 flex-1 md:grid-cols-[20rem_1fr]">
-        <aside
-          className={cn(
-            'min-h-0 flex-col border-line md:flex md:border-r',
-            pane === 'thread' ? 'hidden' : 'flex',
-          )}
-        >
+      <div className="chat-body">
+        <aside className={cn('chat-list-pane', pane === 'thread' && 'chat-pane-off')}>
           <ConversationList
             homes={chat.homes}
             conversations={chat.conversations}
@@ -100,7 +95,7 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
           />
         </aside>
 
-        <section className={cn('min-h-0 flex-col md:flex', pane === 'list' ? 'hidden' : 'flex')}>
+        <section className={cn('chat-thread-pane', pane === 'list' && 'chat-pane-off')}>
           {activeHomeName ? (
             <MessageThread
               homeName={activeHomeName}

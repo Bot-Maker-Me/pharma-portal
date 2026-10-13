@@ -116,7 +116,7 @@ export function MessageThread({
         </span>
       </header>
 
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto chat-scroll px-4 py-4" role="log" aria-live="polite">
+      <div ref={scrollRef} className="chat-scroll px-4 py-4" role="log" aria-live="polite">
         {status === 'loading' && <ChatLoadingState label="Loading conversation…" />}
         {status === 'error' && <ChatErrorState message={error ?? 'Unable to load this conversation.'} onRetry={onRetry} />}
         {status === 'ready' && messages.length === 0 && <ThreadStartState homeName={homeName} />}
