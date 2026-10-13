@@ -9,13 +9,15 @@
 - Package manager: **pnpm**.
 
 # Library Rules
-- **Routing:** Use the Next.js App Router only (files under `app/`). Never add React Router or another client-side router. Routes: `app/page.tsx` (marketing + auth), `app/workspace/page.tsx` (real, tenant-scoped workspace), `app/chat/page.tsx` (Chat with Home), `app/admin/page.tsx` (platform-admin console), `app/platform/page.tsx`, `app/workspace/[feature]/page.tsx`, and `app/auth/callback/route.ts`.
+- **Branding:** The product is **Pharma Portal**, made by **Pharma Strategies** (credited in small type in the marketing footer).
+- **Routing:** Use the Next.js App Router only (files under `app/`). Never add React Router or another client-side router. Routes: `app/page.tsx` (marketing + auth), `app/workspace/page.tsx` (real, tenant-scoped workspace), `app/chat/page.tsx` (Chat with Pharmacy), `app/admin/page.tsx` (platform-admin console), `app/platform/page.tsx`, `app/workspace/[feature]/page.tsx`, and `app/auth/callback/route.ts`.
 - **UI components:** Reuse existing shadcn/ui components from `components/ui` first. Add new shadcn components in the `base-nova` style rather than hand-rolling primitives. Do **not** edit files in `components/ui` directly — wrap them in `components/` or the page instead.
 - **Styling:** Use Tailwind CSS utility classes and the design tokens in `app/globals.css`. Reuse the existing semantic classes (e.g. `site-shell`, `workspace`, `panel-kicker`) for consistency; avoid new global CSS files and inline styles.
 - **Class names:** Use `cn()` from `@/lib/utils` for conditional or merged Tailwind classes; don't concatenate class strings by hand.
 - **Icons:** Use `lucide-react` exclusively.
 - **Data & auth:** Access Supabase only through `lib/supabase/client.ts` (browser) and `lib/supabase/server.ts` (server). Read config from `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` — never hardcode keys or URLs. Keep server-only logic in `lib/features/server.ts` and mark those modules `import 'server-only'`.
 - **Access control:** Gate tenant/feature access with the guards in `lib/features/server.ts` (`requireTenant`, `requireFeature`, `requirePlatformAdmin`) and register features in `lib/features/registry.ts`. Enforce permissions server-side, not just in the UI.
+- **Feature types:** `type: 'base'` features are in every workspace. `type: 'custom'` features (e.g. `chat-with-pharmacy`) are off until a platform administrator grants them per pharmacy in Admin console → Features, which writes `tenant_features` + `feature_audit_log`. Custom features must be gated on the server with `hasFeature`/`requireFeature`, listed in the workspace rail via `getVisibleTenantFeatures`, and must never be self-service.
 - **Spreadsheets:** Use SheetJS (`xlsx`) for any tabular file parsing/generation; don't add another CSV/Excel library.
 - **Dates & numbers:** Use the native `Intl` APIs; do not add `moment`, `dayjs`, or `date-fns`.
 

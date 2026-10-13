@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ShieldCheck, Wrench } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { getSessionTenant } from '@/lib/features/server'
+import { getSessionTenant, getVisibleTenantFeatures } from '@/lib/features/server'
+import { featuresToClient, getCustomFeatures, getVisibleFeatures } from '@/lib/features/registry'
 import { loadWorkspaceData } from '@/lib/workspace/data'
 import { previewWorkspace } from '@/lib/workspace/preview'
 import { loadTenantIdentity } from '@/lib/tenant/server'
@@ -13,9 +14,14 @@ import { WorkspaceView } from '@/components/workspace/workspace-view'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Workspace · Formulary',
+  title: 'Workspace · Pharma Portal',
   description: 'Your pharmacy workspace.',
 }
+
+// The sample pharmacy models a fully granted workspace, so every screen stays
+// reachable while Supabase is unconfigured. A real pharmacy starts with no
+// grants at all — they are given one at a time in Admin console → Features.
+const previewFeatures = featuresToClient(getVisibleFeatures(getCustomFeatures().map((feature) => feature.key)))
 
 export default async function WorkspacePage() {
   // The preview environment can be missing Supabase credentials. Say so plainly
@@ -29,9 +35,10 @@ export default async function WorkspacePage() {
       <WorkspaceView
         tenantName={previewTenant.name ?? 'Your pharmacy'}
         theme={previewTenant.theme}
-        userEmail="preview@formulary.local"
+        userEmail="preview@pharmaportal.local"
         isPlatformAdmin={false}
         data={previewWorkspace}
+        features={previewFeatures}
         preview
       />
     )
@@ -80,19 +87,20 @@ export default async function WorkspacePage() {
           </Link>
         ) : (
           <Link
-            href="/chat"
+            href="/"
             className="inline-flex items-center gap-1.5 rounded-md bg-evergreen px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-evergreen/90"
           >
-            Go to Chat with Home
+            Back to home
           </Link>
         )}
       </main>
     )
   }
 
-  const [tenant, data] = await Promise.all([
+  const [tenant, data, grantedFeatures] = await Promise.all([
     loadTenantIdentity(context.tenantId),
     loadWorkspaceData(context.tenantId),
+    getVisibleTenantFeatures(context.tenantId),
   ])
 
   return (
@@ -102,6 +110,7 @@ export default async function WorkspacePage() {
       userEmail={user.email ?? ''}
       isPlatformAdmin={isPlatformAdmin}
       data={data}
+      features={featuresToClient(grantedFeatures)}
     />
   )
 }

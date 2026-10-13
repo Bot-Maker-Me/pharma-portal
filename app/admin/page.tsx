@@ -7,7 +7,7 @@ import { AdminAccessDenied } from '@/components/admin/access-denied'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Admin console · Formulary',
+  title: 'Admin console · Pharma Portal',
   description: 'Manage tenants, users, nursing home access and workspace content.',
 }
 

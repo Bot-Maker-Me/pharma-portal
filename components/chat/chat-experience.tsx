@@ -45,7 +45,7 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
         <div className="flex min-w-0 items-center gap-2">
           <span className="flex size-7 items-center justify-center bg-evergreen text-sm font-bold text-white">+</span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold tracking-tight text-ink">Chat with Home</p>
+            <p className="truncate text-sm font-bold tracking-tight text-ink">Chat with Pharmacy</p>
             <p className="truncate text-[11px] text-ink-soft">Pharmacy ↔ nursing home messaging</p>
           </div>
         </div>

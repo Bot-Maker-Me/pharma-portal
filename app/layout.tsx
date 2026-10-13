@@ -29,7 +29,7 @@ const plexMono = IBM_Plex_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Formulary — pharmacy workspace & Chat with Home',
+  title: 'Pharma Portal — pharmacy workspace & Chat with Pharmacy',
   description:
     'A focused workspace for pharmacy formularies, plus secure real-time messaging between your pharmacy and the nursing homes you serve.',
   icons: {

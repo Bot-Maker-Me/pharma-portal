@@ -39,11 +39,28 @@ const sectionIcons: Record<string, LucideIcon> = {
   forms: ClipboardList,
 }
 
+// The `sidebar.icon` names the feature registry uses, resolved to real icons.
+const featureIcons: Record<string, LucideIcon> = {
+  table: Table2,
+  document: FileText,
+  check: ClipboardList,
+  box: Inbox,
+  message: MessagesSquare,
+}
+
 function initials(value: string): string {
   const parts = value.replace(/[^a-zA-Z0-9 ]/g, ' ').split(/\s+/).filter(Boolean)
   if (parts.length === 0) return '?'
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+/** One entry of the rail: a feature this pharmacy is allowed to open. */
+export type WorkspaceFeature = {
+  key: string
+  name: string
+  type: string
+  sidebar: { label: string; icon: string; route: string }
 }
 
 type WorkspaceViewProps = {
@@ -53,11 +70,25 @@ type WorkspaceViewProps = {
   userEmail: string
   isPlatformAdmin: boolean
   data: WorkspaceData
+  /**
+   * Everything this pharmacy may open. Custom features are only in here once an
+   * administrator has granted them, so the rail is the visible half of that
+   * gate — the routes check it again on the server.
+   */
+  features: WorkspaceFeature[]
   /** True when this is the sample workspace shown before Supabase is connected. */
   preview?: boolean
 }
 
-export function WorkspaceView({ tenantName, theme, userEmail, isPlatformAdmin, data, preview }: WorkspaceViewProps) {
+export function WorkspaceView({
+  tenantName,
+  theme,
+  userEmail,
+  isPlatformAdmin,
+  data,
+  features,
+  preview,
+}: WorkspaceViewProps) {
   const router = useRouter()
   const [section, setSection] = useState<string>('formulary')
   const [query, setQuery] = useState('')
@@ -73,6 +104,11 @@ export function WorkspaceView({ tenantName, theme, userEmail, isPlatformAdmin, d
         .includes(term),
     )
   }, [data.formulary, query])
+
+  // Extras are the gated half of the rail: a pharmacy only sees one here once an
+  // administrator has granted it.
+  const customFeatures = features.filter((feature) => feature.type === 'custom')
+  const chatFeature = customFeatures.find((feature) => feature.key === 'chat-with-pharmacy') ?? null
 
   const sectionContent = data.content.filter((item) => item.section === section)
   const activeSection = workspaceSections.find((item) => item.key === section)
@@ -93,12 +129,14 @@ export function WorkspaceView({ tenantName, theme, userEmail, isPlatformAdmin, d
             +
           </span>
           <div className="ws-brand-name">
-            <strong>Formulary</strong>
-            <span>portal</span>
+            <strong>Pharma</strong>
+            <span>Portal</span>
           </div>
-          <Link className="ws-bell" href="/chat" aria-label="Messages and notifications">
-            <Bell className="ws-nav-icon" aria-hidden="true" />
-          </Link>
+          {chatFeature && (
+            <Link className="ws-bell" href={chatFeature.sidebar.route} aria-label="Messages and notifications">
+              <Bell className="ws-nav-icon" aria-hidden="true" />
+            </Link>
+          )}
         </div>
 
         <p className="ws-sidebar-label">HOME</p>
@@ -134,10 +172,15 @@ export function WorkspaceView({ tenantName, theme, userEmail, isPlatformAdmin, d
             )
           })}
 
-          <Link className="ws-nav-row" href="/chat">
-            <MessagesSquare className="ws-nav-icon" aria-hidden="true" />
-            <span className="truncate">Chat with Home</span>
-          </Link>
+          {customFeatures.map((feature) => {
+            const Icon = featureIcons[feature.sidebar.icon] ?? MessagesSquare
+            return (
+              <Link key={feature.key} className="ws-nav-row" href={feature.sidebar.route}>
+                <Icon className="ws-nav-icon" aria-hidden="true" />
+                <span className="truncate">{feature.sidebar.label}</span>
+              </Link>
+            )
+          })}
 
           {isPlatformAdmin && (
             <Link className="ws-nav-row" href="/admin">

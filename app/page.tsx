@@ -138,9 +138,9 @@ export default function Page() {
             </button>
             <div className="auth-brand">
               <span className="wordmark-mark">+</span>
-              <span>formulary</span>
+              <span>Pharma Portal</span>
             </div>
-            <p className="eyebrow">FORMULARY ACCESS</p>
+            <p className="eyebrow">PORTAL ACCESS</p>
             <h2>{authMode === 'sign-up' ? 'Create your account' : 'Welcome back'}</h2>
             <p className="panel-subtitle">Use your pharmacy account to manage medicines and formulary rules.</p>
             <label>
@@ -188,8 +188,8 @@ export default function Page() {
 
       <main className="site-shell">
         <nav className={`topbar ${hasScrolled ? 'is-scrolled' : ''}`} aria-label="Main navigation">
-          <a className="wordmark" href="#top" aria-label="Formulary home">
-            <span className="wordmark-mark">+</span> formulary
+          <a className="wordmark" href="#top" aria-label="Pharma Portal home">
+            <span className="wordmark-mark">+</span> Pharma Portal
           </a>
           <div className="nav-links">
             <a href="#how-it-works">How it works</a>
@@ -323,11 +323,14 @@ export default function Page() {
         </section>
 
         <footer>
-          <a className="wordmark" href="#top" data-reveal>
-            <span className="wordmark-mark">+</span> formulary
+          <a className="wordmark" href="#top" data-reveal aria-label="Pharma Portal home">
+            <span className="wordmark-mark">+</span> Pharma Portal
           </a>
+          <span className="footer-credit" data-reveal>
+            by Pharma Strategies
+          </span>
           <span data-reveal>Clear choices. Better care.</span>
-          <span data-reveal>© 2026 Formulary</span>
+          <span data-reveal>© 2026 Pharma Portal</span>
         </footer>
       </main>
     </div>

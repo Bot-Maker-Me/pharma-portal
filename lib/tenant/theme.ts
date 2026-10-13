@@ -20,13 +20,13 @@ export type TenantIdentity = {
 }
 
 export const tenantThemes: TenantTheme[] = [
-  { key: 'default', label: 'Default (Formulary)' },
+  { key: 'default', label: 'Default (Pharma Portal)' },
   { key: 'pharmasave', label: 'Pharmasave' },
 ]
 
 export const defaultTenantTheme: TenantTheme = {
   key: 'default',
-  label: 'Default (Formulary)',
+  label: 'Default (Pharma Portal)',
 }
 
 /** Reads a raw tenants.theme value (text, jsonb, or missing) without throwing. */

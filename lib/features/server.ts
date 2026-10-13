@@ -2,9 +2,11 @@ import 'server-only'
 
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import type { FeatureGrant, TenantContext } from './registry'
+import { getVisibleFeatures, type FeatureDefinition, type FeatureGrant, type TenantContext } from './registry'
 
-const baseFeatureKeys = new Set(['formulary', 'sops', 'opening-closing', 'blister-pack-tracker', 'delivery-slips', 'signing-sheet', 'vaccine-wait-list', 'chat-with-home'])
+// Mirrors `type: 'base'` in the registry. A feature listed here is part of every
+// pharmacy's workspace; anything else has to be granted in tenant_features.
+const baseFeatureKeys = new Set(['formulary', 'sops', 'opening-closing', 'blister-pack-tracker', 'delivery-slips', 'signing-sheet', 'vaccine-wait-list'])
 
 export async function getSessionTenant(): Promise<TenantContext | null> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null
@@ -27,6 +29,16 @@ export async function hasFeature(tenantId: string, featureKey: string) {
   if (baseFeatureKeys.has(featureKey)) return true
   const grants = await getTenantEntitlements(tenantId)
   return grants.some((grant) => grant.feature_key === featureKey && grant.enabled)
+}
+
+/**
+ * Everything a pharmacy's workspace should show: all base features, plus the
+ * custom ones an administrator has granted it. A custom feature that has never
+ * been granted simply is not in the list, so nothing renders for it.
+ */
+export async function getVisibleTenantFeatures(tenantId: string): Promise<FeatureDefinition[]> {
+  const grants = await getTenantEntitlements(tenantId)
+  return getVisibleFeatures(grants.map((grant) => grant.feature_key))
 }
 
 export async function requireTenant() {

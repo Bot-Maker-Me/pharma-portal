@@ -10,11 +10,13 @@ import { workspaceSections, type WorkspaceSectionKey } from '@/lib/workspace/sec
 import { UsersPanel } from '@/components/admin/users-panel'
 import { HomesPanel } from '@/components/admin/homes-panel'
 import { TenantsPanel } from '@/components/admin/tenants-panel'
+import { FeaturesPanel } from '@/components/admin/features-panel'
 import { FormularyPanel, SectionPanel } from '@/components/admin/content-panel'
 
 type View =
   | { kind: 'formulary' }
   | { kind: 'section'; section: WorkspaceSectionKey }
+  | { kind: 'features' }
   | { kind: 'users' }
   | { kind: 'homes' }
   | { kind: 'tenants' }
@@ -25,6 +27,10 @@ const headings: Record<View['kind'], { title: string; subtitle: string }> = {
     subtitle: 'Preferred generics and substitution rules for the selected pharmacy.',
   },
   section: { title: '', subtitle: '' },
+  features: {
+    title: 'Features',
+    subtitle: 'Extras granted per pharmacy. A pharmacy only gets one when you grant it here.',
+  },
   users: {
     title: 'Users & access',
     subtitle: 'Every account, the pharmacy it belongs to, and which nursing homes it can chat with.',
@@ -86,7 +92,7 @@ export function AdminConsole({ adminEmail }: { adminEmail: string }) {
     ? { title: sectionMeta.label, subtitle: sectionMeta.hint }
     : headings[view.kind]
 
-  const needsTenant = view.kind === 'formulary' || view.kind === 'section'
+  const needsTenant = view.kind === 'formulary' || view.kind === 'section' || view.kind === 'features'
 
   return (
     // The console wears the selected pharmacy's theme, so managing a branded
@@ -97,7 +103,7 @@ export function AdminConsole({ adminEmail }: { adminEmail: string }) {
           <span className="wordmark-mark" aria-hidden="true">
             +
           </span>
-          formulary
+          Pharma Portal
         </div>
 
         <p className="admin-rail-eyebrow">TEAM ADMINISTRATION</p>
@@ -152,6 +158,13 @@ export function AdminConsole({ adminEmail }: { adminEmail: string }) {
         <nav className="admin-rail-nav admin-rail-nav--platform" aria-label="Platform administration">
           <button
             type="button"
+            className={cn('admin-rail-item', view.kind === 'features' && 'is-on')}
+            onClick={() => setView({ kind: 'features' })}
+          >
+            Features
+          </button>
+          <button
+            type="button"
             className={cn('admin-rail-item', view.kind === 'users' && 'is-on')}
             onClick={() => setView({ kind: 'users' })}
           >
@@ -193,7 +206,7 @@ export function AdminConsole({ adminEmail }: { adminEmail: string }) {
             </Link>
             <Link className="admin-ghost-button" href="/chat">
               <MessagesSquare className="size-3.5" aria-hidden="true" />
-              Chat with Home
+              Chat with Pharmacy
             </Link>
           </div>
         </header>
@@ -255,6 +268,9 @@ export function AdminConsole({ adminEmail }: { adminEmail: string }) {
             </div>
           )}
 
+          {status === 'ready' && view.kind === 'features' && (
+            <FeaturesPanel tenants={tenants} tenantId={tenantId} onChanged={reload} />
+          )}
           {status === 'ready' && view.kind === 'formulary' && tenantId && <FormularyPanel tenantId={tenantId} />}
           {status === 'ready' && view.kind === 'section' && tenantId && (
             <SectionPanel tenantId={tenantId} section={view.section} />

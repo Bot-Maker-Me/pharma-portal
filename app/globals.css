@@ -95,7 +95,7 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 @layer base { * { border-color: var(--line); } }
 
 /* ---------------------------------------------------------------------------
-   Chat with Home — shared messaging between the Pharma and Nursing Home portals
+   Chat with Pharmacy — shared messaging between the Pharma and Nursing Home portals
 --------------------------------------------------------------------------- */
 .sidebar-link { text-decoration: none; }
 .sidebar-link:hover { color: var(--white); background: rgba(255,255,255,.08); }
@@ -382,6 +382,7 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 .site-theme .feature-number { color: var(--red); }
 .site-theme footer { color: var(--ink-soft); font-size: 13px; padding: 34px clamp(20px, 4.5vw, 64px); }
 .site-theme footer .wordmark { color: var(--ink); }
+.site-theme .footer-credit { color: var(--ink-soft); font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; }
 .site-theme .text-link { color: var(--ink); font-size: 15px; }
 .site-theme .text-link span { color: var(--red); }
 .site-theme .eyebrow { color: var(--coral); font-size: 11px; letter-spacing: .14em; }
@@ -566,8 +567,9 @@ html { scroll-padding-top: 92px; }
 
 @media (max-width: 680px) {
   .site-theme .nav-links { gap: 10px; }
-  .site-theme .nav-cta, .site-theme .nav-signin { padding: 11px 12px; font-size: 11px; letter-spacing: .1em; }
-  .site-theme .wordmark { font-size: 19px; }
+  .site-theme .nav-cta, .site-theme .nav-signin { padding: 10px 11px; font-size: 11px; letter-spacing: .1em; }
+  /* The wordmark is a two-word name now, so it gives the buttons back some room. */
+  .site-theme .wordmark { font-size: 17px; }
   .site-theme .ticker { gap: 14px; }
   .site-theme .ticker-scroll { display: none; }
 }

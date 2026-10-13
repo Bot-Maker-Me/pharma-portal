@@ -1,6 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
+import { getFeature } from '@/lib/features/registry'
 import type { TenantThemeKey } from '@/lib/tenant/theme'
 import type { WorkspaceSectionKey } from '@/lib/workspace/sections'
 
@@ -255,4 +256,77 @@ export async function addFormularyItem(input: {
 export async function deleteFormularyItem(id: string): Promise<void> {
   const { error } = await db().from('formulary_items').delete().eq('id', id)
   if (error) fail(error)
+}
+
+/** The custom feature keys a pharmacy currently has switched on. */
+export async function loadTenantFeatureKeys(tenantId: string): Promise<string[]> {
+  const { data, error } = await db()
+    .from('tenant_features')
+    .select('feature_key, enabled')
+    .eq('tenant_id', tenantId)
+    .eq('enabled', true)
+  if (error) fail(error)
+  return ((data ?? []) as { feature_key: string }[]).map((row) => String(row.feature_key))
+}
+
+/**
+ * Grants or revokes one custom feature for one pharmacy, and records the change
+ * in the audit log. This is the only way a pharmacy gets a custom feature: there
+ * is no self-service path, and no default.
+ *
+ * `tenant_features.feature_key` is a foreign key onto `features.key`, so the
+ * catalog row is written first — that way granting still works for a feature the
+ * seed migration never listed.
+ */
+export async function setTenantFeature(input: {
+  tenantId: string
+  featureKey: string
+  enabled: boolean
+}): Promise<void> {
+  const feature = getFeature(input.featureKey)
+  if (!feature || feature.type !== 'custom') throw new Error('Only custom features can be granted.')
+
+  const client = db()
+  const {
+    data: { user },
+  } = await client.auth.getUser()
+  if (!user) throw new Error('Sign in again to change feature access.')
+
+  const { error: catalogError } = await client
+    .from('features')
+    .upsert(
+      { key: feature.key, name: feature.name, description: feature.description, type: feature.type, is_active: true },
+      { onConflict: 'key' },
+    )
+  if (catalogError) fail(catalogError)
+
+  if (input.enabled) {
+    const { error } = await client.from('tenant_features').upsert(
+      {
+        tenant_id: input.tenantId,
+        feature_key: feature.key,
+        enabled: true,
+        granted_by: user.id,
+        granted_at: new Date().toISOString(),
+      },
+      { onConflict: 'tenant_id,feature_key' },
+    )
+    if (error) fail(error)
+  } else {
+    const { error } = await client
+      .from('tenant_features')
+      .delete()
+      .eq('tenant_id', input.tenantId)
+      .eq('feature_key', feature.key)
+    if (error) fail(error)
+  }
+
+  const { error: auditError } = await client.from('feature_audit_log').insert({
+    actor_id: user.id,
+    tenant_id: input.tenantId,
+    feature_key: feature.key,
+    action: input.enabled ? 'grant' : 'revoke',
+    after_state: { enabled: input.enabled },
+  })
+  if (auditError) fail(auditError)
 }
