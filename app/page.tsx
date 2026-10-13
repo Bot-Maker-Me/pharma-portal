@@ -6,12 +6,14 @@ import { useRouter } from 'next/navigation'
 import { MessagesSquare } from 'lucide-react'
 import { createClient as createSupabaseClient } from '@/lib/supabase/client'
 
-const previewRows = [
-  ['Alendronate', 'Alendronate', '67'],
-  ['Amlodipine', 'Amlodipine', '72'],
-  ['Apixaban', 'Apixaban', '72'],
-  ['Atorvastatin', 'Atorvastatin', '72'],
-  ['Metformin', 'Metformin', '20'],
+// The five register rows the ledger sheet shows — the closing counts for the
+// last week of 2026, in the same order the pharmacy signed them off.
+const ledgerRows = [
+  { date: '07 Oct 26', drug: 'Oxycodone 5mg', inQty: '120', outQty: '96', balance: '24' },
+  { date: '07 Oct 26', drug: 'Hydromorphone 2mg', inQty: '60', outQty: '58', balance: '2' },
+  { date: '06 Oct 26', drug: 'Morphine 10mg', inQty: '90', outQty: '90', balance: '0' },
+  { date: '05 Oct 26', drug: 'Lorazepam 1mg', inQty: '150', outQty: '144', balance: '6' },
+  { date: '02 Oct 26', drug: 'Methylphenidate 10mg', inQty: '40', outQty: '40', balance: '0' },
 ]
 
 const features = [
@@ -88,7 +90,7 @@ export default function Page() {
   }
 
   return (
-    <>
+    <div className="site-theme">
       {authMode && (
         <div
           className="auth-backdrop"
@@ -173,72 +175,70 @@ export default function Page() {
 
         <section className="hero" id="top">
           <div className="hero-copy">
-            <p className="eyebrow">
-              <span className="eyebrow-line" /> FORMULARY MANAGEMENT FOR INDEPENDENT PHARMACIES
-            </p>
-            <h1>
-              Know what your pharmacy <em>prefers.</em>
+            <p className="hero-label">§ 01 — The register</p>
+            <h1 className="hero-title">
+              <span className="hero-line">Every controlled</span>
+              <span className="hero-line">
+                substance, <em>counted</em>
+              </span>
+              <span className="hero-line">and signed.</span>
             </h1>
             <p className="hero-description">
               A focused workspace for keeping generic substitutions accurate, accessible, and accountable — from the
               counter to the back office.
             </p>
             <div className="hero-actions">
-              <button className="dark-button large" onClick={() => openAuth('sign-up')}>
-                Start your free trial <span aria-hidden="true">↗</span>
+              <button className="solid-button" onClick={() => openAuth('sign-up')}>
+                Book a demo
               </button>
-              <span>No credit card required</span>
-            </div>
-            <div className="trust-line">
-              <span>Designed for the way pharmacies work</span>
-              <span>·</span>
-              <span>Simple to start</span>
-              <span>·</span>
-              <span>Ready when you are</span>
+              <Link className="link-button" href="/workspace">
+                View all apps <span aria-hidden="true">→</span>
+              </Link>
             </div>
           </div>
 
-          <div className="preview-frame">
-            <div className="preview-top">
-              <span className="window-dots">
-                <i />
-                <i />
-                <i />
-              </span>
-              <span>Northside Pharmacy / Formulary</span>
-              <span className="preview-status">
-                <b /> Live workspace
-              </span>
-            </div>
-            <div className="preview-inner">
-              <div className="preview-heading">
-                <div>
-                  <span className="mini-label">FORMULARY</span>
-                  <strong>Preferred generics</strong>
-                </div>
-                <span className="preview-search">⌕ Search medicines</span>
-              </div>
-              <div className="mini-table">
-                <div className="mini-row mini-head">
-                  <span>Chemical name</span>
-                  <span>Preferred generic</span>
-                  <span>DIN</span>
-                </div>
-                {previewRows.map((row) => (
-                  <div className="mini-row" key={row[0]}>
-                    <span>{row[0]}</span>
-                    <span>{row[1]}</span>
-                    <span className="din">{row[2]}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="preview-footer">
-                <span>
-                  <b /> 248 medicines
+          <div className="ledger-stack">
+            <div className="ledger-sheets">
+              <div className="ledger-sheet ledger-sheet-back" aria-hidden="true" />
+              <div className="ledger-sheet ledger-sheet-front">
+                <table className="ledger-table">
+                  <colgroup>
+                    <col className="ledger-col-date" />
+                    <col />
+                    <col className="ledger-col-num" />
+                    <col className="ledger-col-num" />
+                    <col className="ledger-col-bal" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Drug</th>
+                      <th>In</th>
+                      <th>Out</th>
+                      <th>Bal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ledgerRows.map((row) => (
+                      <tr key={`${row.date}-${row.drug}`}>
+                        <td className="ledger-date">{row.date}</td>
+                        <td>{row.drug}</td>
+                        <td>{row.inQty}</td>
+                        <td>{row.outQty}</td>
+                        <td>{row.balance}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <span className="ledger-stamp" aria-hidden="true">
+                  VERIFIED
                 </span>
-                <span>Synced just now</span>
               </div>
             </div>
+
+            <p className="ledger-chip ledger-chip-count">Counted today 128</p>
+            <p className="ledger-chip ledger-chip-sign">JD · 09:42 / SM · 09:44</p>
+            <p className="ledger-chip ledger-chip-alert">Discrepancy detected: Oxycodone 5mg, count off by 2</p>
           </div>
         </section>
 
@@ -270,6 +270,6 @@ export default function Page() {
           <span>© 2026 Formulary</span>
         </footer>
       </main>
-    </>
+    </div>
   )
 }

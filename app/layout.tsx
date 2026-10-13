@@ -30,7 +30,7 @@ export const viewport: Viewport = {
   // light keeps the browser from painting native controls (inputs, selects,
   // scrollbars) in dark mode, which is what made sign-in fields look blank.
   colorScheme: 'light',
-  themeColor: '#f4f1e9',
+  themeColor: '#0b1220',
 }
 
 export default function RootLayout({
@@ -41,6 +41,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
+        {/* The three faces the theme is built on. They load from Google Fonts so a
+            blocked or offline request degrades to the system stack instead of
+            failing the build. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          precedence="default"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=IBM+Plex+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+        />
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
