@@ -89,7 +89,7 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
   --color-coral: var(--coral);
   --color-line: var(--line);
   --font-sans: var(--font-manrope, 'Helvetica Neue'), 'Helvetica Neue', Arial, sans-serif;
-  --font-heading: var(--font-display, 'Helvetica Neue'), var(--font-manrope, Arial), 'Helvetica Neue', Arial, sans-serif;
+  --font-serif: var(--font-display, Georgia), Georgia, 'Times New Roman', serif;
   --font-mono: var(--font-plex-mono, ui-monospace), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 @layer base { * { border-color: var(--line); } }
@@ -97,11 +97,6 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 /* ---------------------------------------------------------------------------
    Chat with Home — shared messaging between the Pharma and Nursing Home portals
 --------------------------------------------------------------------------- */
-.nav-chat { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--evergreen); background: var(--evergreen); color: var(--white); padding: 11px 18px; font-size: 13px; font-weight: 700; text-decoration: none; transition: transform .18s ease, background-color .2s ease; }
-.nav-chat:hover { background: #245445; }
-.nav-chat:active { transform: scale(.98); }
-.nav-chat-icon { width: 15px; height: 15px; flex: 0 0 auto; }
-.nav-links .nav-chat { display: inline-flex; }
 .sidebar-link { text-decoration: none; }
 .sidebar-link:hover { color: var(--white); background: rgba(255,255,255,.08); }
 .sidebar-icon { width: 15px; height: 15px; flex: 0 0 auto; }
@@ -337,8 +332,6 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 .site-theme .wordmark-mark { background: var(--red); color: #fff; }
 .site-theme .nav-links a:hover, .site-theme .nav-signin:hover { color: var(--ink); }
 .site-theme .nav-links a::after { background: var(--red); }
-.site-theme .nav-chat { border-color: rgba(237, 230, 218, .28); background: transparent; color: var(--ink); }
-.site-theme .nav-chat:hover { background: rgba(237, 230, 218, .09); }
 .site-theme .nav-cta, .site-theme .dark-button { background: var(--red); color: #fff; }
 .site-theme .nav-cta span, .site-theme .dark-button span { color: rgba(255, 255, 255, .8); }
 .site-theme .nav-cta:hover, .site-theme .dark-button:hover { background: var(--red-deep); }
@@ -346,9 +339,9 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 /* Hero — 7/5 above 1024px, stacked below it. */
 .site-theme .hero { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(32px, 4vw, 64px); align-items: center; max-width: 1320px; min-height: calc(100svh - var(--nav-h)); margin: 0 auto; padding: clamp(40px, 5vw, 72px) clamp(20px, 4.5vw, 64px) clamp(64px, 7vw, 104px); }
 .site-theme .hero-copy { max-width: 40rem; }
-.site-theme .hero-label { display: flex; align-items: center; gap: 12px; margin: 0; color: var(--ink-soft); font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; }
+.site-theme .hero-label { display: flex; align-items: center; gap: 12px; margin: 0; color: var(--ink-soft); font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; }
 .site-theme .hero-label::before { width: 26px; height: 1px; flex: 0 0 26px; background: var(--red); content: ''; }
-.site-theme .hero-title { margin: 22px 0 0; color: var(--ink); font-family: 'Bricolage Grotesque', Manrope, 'Helvetica Neue', sans-serif; font-size: clamp(2.1rem, 4.2vw, 4rem); font-weight: 800; line-height: .95; letter-spacing: -.03em; text-transform: uppercase; }
+.site-theme .hero-title { margin: 22px 0 0; color: var(--ink); }
 .site-theme .hero-line { display: block; }
 .site-theme .hero-title em { color: transparent; font-style: normal; -webkit-text-stroke: 1.5px var(--sheet); }
 .site-theme .hero-description { max-width: 52ch; margin: 26px 0 0; color: var(--ink-soft); font-size: 17px; line-height: 1.6; }
@@ -366,7 +359,7 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 .site-theme .ledger-sheet { border-radius: 2px; background: var(--sheet); color: var(--sheet-ink); }
 .site-theme .ledger-sheet-back { position: absolute; inset: 0; background: var(--sheet-back); transform: translate(12px, -12px) rotate(1deg); }
 .site-theme .ledger-sheet-front { position: relative; padding: 26px 28px 118px; box-shadow: 0 26px 60px rgba(0, 0, 0, .45); transform: rotate(-1.5deg); }
-.site-theme .ledger-table { width: 100%; min-width: 0; table-layout: fixed; border-collapse: collapse; color: var(--sheet-ink); font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; font-variant-numeric: tabular-nums; }
+.site-theme .ledger-table { width: 100%; min-width: 0; table-layout: fixed; border-collapse: collapse; color: var(--sheet-ink); font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; }
 .site-theme .ledger-table th { height: auto; padding: 0 0 12px; border-bottom: 1px solid rgba(11, 18, 32, .24); color: rgba(11, 18, 32, .6); font-size: 14px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
 .site-theme .ledger-table td { height: auto; padding: 12px 0; border-bottom: 1px solid rgba(11, 18, 32, .13); color: var(--sheet-ink); }
 .site-theme .ledger-table tbody tr { cursor: default; }
@@ -377,7 +370,7 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 .site-theme .ledger-col-num { width: 46px; }
 .site-theme .ledger-col-bal { width: 56px; }
 .site-theme .ledger-date { padding-right: 24px; white-space: nowrap; }
-.site-theme .ledger-stamp { position: absolute; right: 12px; bottom: 14px; display: flex; width: 86px; height: 86px; align-items: center; justify-content: center; border: 2px solid var(--red); border-radius: 9999px; color: var(--red); font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; font-weight: 700; letter-spacing: .14em; transform: rotate(-12deg); }
+.site-theme .ledger-stamp { position: absolute; right: 12px; bottom: 14px; display: flex; width: 86px; height: 86px; align-items: center; justify-content: center; border: 2px solid var(--red); border-radius: 9999px; color: var(--red); font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .14em; transform: rotate(-12deg); }
 .site-theme .ledger-stamp::after { position: absolute; inset: 5px; border: 1px solid var(--red); border-radius: 9999px; content: ''; }
 .site-theme .ledger-chip { position: absolute; z-index: 2; max-width: 100%; border: 1px solid rgba(237, 230, 218, .2); border-radius: 12px; background: rgba(237, 230, 218, .07); padding: 10px 14px; color: var(--ink); font-size: 14px; line-height: 1.45; }
 .site-theme .ledger-chip-count { top: 0; right: 0; }
@@ -426,7 +419,8 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 /* ---------------------------------------------------------------------------
    Typography — the self-hosted faces, wired to the class-based rules above.
 --------------------------------------------------------------------------- */
-.site-theme .hero-title { font-family: var(--font-display, 'Helvetica Neue'), var(--font-manrope, Arial), 'Helvetica Neue', Arial, sans-serif; }
+.site-theme .hero-title { font-family: var(--font-display, Georgia), Georgia, 'Times New Roman', serif; }
+.site-theme .wordmark { font-family: var(--font-display, Georgia), Georgia, 'Times New Roman', serif; }
 .site-theme .hero-label, .site-theme .ledger-table, .site-theme .ledger-stamp,
 .site-theme .feature-number, .ws-mono, .din {
   font-family: var(--font-plex-mono, ui-monospace), ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -446,6 +440,8 @@ html { scroll-padding-top: 92px; }
 .reveal-ready [data-reveal] { opacity: 0; transform: translateY(26px); }
 .reveal-ready [data-reveal].is-revealed { opacity: 1; transform: translateY(0); }
 [data-reveal] { transition: opacity .75s cubic-bezier(.22, .61, .36, 1), transform .75s cubic-bezier(.22, .61, .36, 1); }
+/* The headline drops in from above while the rest of the copy rises to meet it. */
+.reveal-ready .site-theme .hero-title[data-reveal] { transform: translateY(-30px); }
 .site-theme .hero-copy > [data-reveal]:nth-child(1) { transition-delay: 70ms; }
 .site-theme .hero-copy > [data-reveal]:nth-child(2) { transition-delay: 160ms; }
 .site-theme .hero-copy > [data-reveal]:nth-child(3) { transition-delay: 250ms; }
@@ -477,8 +473,6 @@ html { scroll-padding-top: 92px; }
   .site-theme .solid-button:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(216, 35, 47, .34); }
   .site-theme .nav-cta { transition: background-color .25s ease, transform .25s ease, box-shadow .25s ease; }
   .site-theme .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(216, 35, 47, .28); }
-  .site-theme .nav-chat { transition: background-color .25s ease, border-color .25s ease; }
-  .site-theme .nav-chat:hover { border-color: rgba(237, 230, 218, .5); }
   .site-theme .text-link span { transition: transform .25s cubic-bezier(.22, .61, .36, 1); }
   .site-theme .text-link:hover span { transform: translateX(4px); }
 }
@@ -489,3 +483,91 @@ html { scroll-padding-top: 92px; }
 /* Chat reads like a messaging app: the conversation list and the thread scroll
    smoothly and independently, and the shell never grows past the viewport. */
 .chat-scroll { scroll-behavior: smooth; scrollbar-gutter: stable; }
+
+/* ---------------------------------------------------------------------------
+   The register, part two: the chrome the design leans on — a high-contrast
+   serif display face, mono micro-type, the live register strip, and the violet
+   bloom sitting behind everything.
+--------------------------------------------------------------------------- */
+.site-theme {
+  --mono: var(--font-plex-mono, ui-monospace), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --serif: var(--font-display, Georgia), Georgia, 'Times New Roman', serif;
+  background-color: #0b1220;
+}
+
+/* Two soft radial washes and a whisper of grain, painted behind the page so the
+   bloom never intercepts a click. */
+.site-theme::before {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(54% 44% at 24% 0%, rgba(112, 98, 214, .34), transparent 66%),
+    radial-gradient(40% 34% at 88% 12%, rgba(216, 35, 47, .15), transparent 70%),
+    radial-gradient(72% 56% at 50% 106%, rgba(22, 36, 82, .62), transparent 72%);
+  content: '';
+}
+.site-theme::after {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  content: '';
+}
+.site-theme .site-shell { position: relative; z-index: 1; }
+
+/* Nav: serif wordmark, mono micro-type, an outlined secondary and a red primary. */
+.site-theme .wordmark { font-family: var(--serif); font-size: 24px; font-weight: 600; letter-spacing: -.01em; }
+.site-theme .nav-links { gap: 30px; color: var(--ink-soft); font-family: var(--mono); font-size: 12px; letter-spacing: .16em; text-transform: uppercase; }
+.site-theme .nav-links a:hover { color: var(--ink); }
+.site-theme .nav-signin { border: 1px solid rgba(237, 230, 218, .34); background: transparent; color: var(--ink); padding: 13px 19px; font-family: var(--mono); font-size: 12px; letter-spacing: .16em; text-transform: uppercase; transition: border-color .25s ease, background-color .25s ease; }
+.site-theme .nav-signin:hover { border-color: rgba(237, 230, 218, .72); background: rgba(237, 230, 218, .07); color: var(--ink); }
+.site-theme .nav-cta { border-radius: 0; padding: 14px 21px; font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; }
+
+/* The live register strip under the nav. */
+.site-theme .ticker { display: flex; align-items: center; gap: 26px; max-width: 1320px; margin: 0 auto; padding: 15px clamp(20px, 4.5vw, 64px); border-bottom: 1px solid var(--line); }
+.site-theme .ticker-label { display: flex; flex: 0 0 auto; align-items: center; gap: 9px; margin: 0; color: var(--ink-soft); font-family: var(--mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; }
+.site-theme .ticker-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: ticker-pulse 2s ease-in-out infinite; }
+.site-theme .ticker-track { position: relative; flex: 1; min-width: 0; overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); }
+.site-theme .ticker-run { display: flex; width: max-content; gap: 34px; animation: ticker-run 44s linear infinite; }
+.site-theme .ticker-item { color: var(--ink-soft); font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
+.site-theme .ticker-scroll { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; margin: 0; color: var(--ink-soft); font-family: var(--mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; }
+@keyframes ticker-run { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes ticker-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+@keyframes nav-drop { from { opacity: 0; transform: translateY(-18px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Hero. */
+.site-theme .hero { min-height: calc(100svh - var(--nav-h) - 3rem); padding-top: clamp(30px, 4vw, 58px); }
+.site-theme .hero-title { font-family: var(--serif); font-size: clamp(2.2rem, 4.7vw, 4.1rem); font-weight: 500; line-height: 1.02; letter-spacing: -.02em; text-transform: none; }
+.site-theme .hero-title em { color: var(--red); font-style: normal; font-weight: 600; -webkit-text-stroke: 0; }
+.site-theme .hero-description { max-width: 46ch; font-size: 18px; line-height: 1.55; }
+.site-theme .solid-button { height: 46px; border-radius: 0; padding: 0 22px; font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; }
+.site-theme .link-button { color: var(--red); font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; }
+.site-theme .link-button span { color: var(--red); }
+
+/* Ledger chips: a label/value split for the count, two lines for the signature. */
+.site-theme .ledger-chip { border-color: rgba(237, 230, 218, .16); background: rgba(9, 15, 28, .74); backdrop-filter: blur(8px); }
+.site-theme .ledger-chip-count { padding: 12px 18px; text-align: right; }
+.site-theme .ledger-chip-label { display: block; color: var(--ink-soft); font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; }
+.site-theme .ledger-chip-value { display: block; margin-top: 3px; color: var(--ink); font-family: var(--serif); font-size: 28px; font-weight: 600; line-height: 1.05; }
+.site-theme .ledger-chip-sign { display: flex; flex-direction: column; gap: 3px; }
+.site-theme .ledger-chip-line { display: flex; align-items: baseline; gap: 10px; color: var(--ink-soft); font-family: var(--mono); font-size: 12px; letter-spacing: .1em; }
+.site-theme .ledger-chip-line b { color: var(--red); font-weight: 500; }
+.site-theme .ledger-chip-alert { border-left: 3px solid var(--red); color: var(--ink); font-size: 14px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The nav and the strip drop in; the reveal observer handles the rest. */
+  .site-theme .topbar { animation: nav-drop .6s cubic-bezier(.22, .61, .36, 1) backwards; }
+  .site-theme .ticker { animation: nav-drop .6s cubic-bezier(.22, .61, .36, 1) .12s backwards; }
+}
+
+@media (max-width: 680px) {
+  .site-theme .nav-links { gap: 10px; }
+  .site-theme .nav-cta, .site-theme .nav-signin { padding: 11px 12px; font-size: 11px; letter-spacing: .1em; }
+  .site-theme .wordmark { font-size: 19px; }
+  .site-theme .ticker { gap: 14px; }
+  .site-theme .ticker-scroll { display: none; }
+}

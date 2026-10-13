@@ -1,5 +1,5 @@
 import { Analytics } from '@vercel/analytics/next'
-import { Bricolage_Grotesque, IBM_Plex_Mono, Manrope } from 'next/font/google'
+import { IBM_Plex_Mono, Manrope, Playfair_Display } from 'next/font/google'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
@@ -13,9 +13,10 @@ const manrope = Manrope({
   display: 'swap',
 })
 
-const display = Bricolage_Grotesque({
+// The display face: a high-contrast transitional serif, which is what the
+// register headline is set in.
+const serif = Playfair_Display({
   subsets: ['latin'],
-  axes: ['opsz'],
   variable: '--font-display',
   display: 'swap',
 })
@@ -64,7 +65,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${manrope.variable} ${display.variable} ${plexMono.variable}`}>
+    <html lang="en" className={`${manrope.variable} ${serif.variable} ${plexMono.variable}`}>
       <body className="antialiased">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}

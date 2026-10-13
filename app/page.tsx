@@ -3,17 +3,25 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { MessagesSquare } from 'lucide-react'
 import { createClient as createSupabaseClient } from '@/lib/supabase/client'
 
 // The five register rows the ledger sheet shows — the closing counts for the
 // last week of 2026, in the same order the pharmacy signed them off.
 const ledgerRows = [
-  { date: '07 Oct 26', drug: 'Oxycodone 5mg', inQty: '120', outQty: '96', balance: '24' },
-  { date: '07 Oct 26', drug: 'Hydromorphone 2mg', inQty: '60', outQty: '58', balance: '2' },
-  { date: '06 Oct 26', drug: 'Morphine 10mg', inQty: '90', outQty: '90', balance: '0' },
-  { date: '05 Oct 26', drug: 'Lorazepam 1mg', inQty: '150', outQty: '144', balance: '6' },
-  { date: '02 Oct 26', drug: 'Methylphenidate 10mg', inQty: '40', outQty: '40', balance: '0' },
+  { date: '07 Oct 26', drug: 'Oxycodone 5mg', inQty: '50', outQty: '32', balance: '18' },
+  { date: '07 Oct 26', drug: 'Fentanyl 25µg', inQty: '100', outQty: '85', balance: '15' },
+  { date: '06 Oct 26', drug: 'Morphine 10mg', inQty: '75', outQty: '60', balance: '15' },
+  { date: '06 Oct 26', drug: 'Hydromorphone 2mg', inQty: '40', outQty: '38', balance: '2' },
+  { date: '05 Oct 26', drug: 'Oxycodone 5mg', inQty: '50', outQty: '45', balance: '5' },
+]
+
+// The live register strip. Rendered twice so the marquee can loop seamlessly.
+const tickerEntries = [
+  '07 Oct · Oxycodone 5mg · 50 in',
+  '07 Oct · Fentanyl 25µg · 85 out',
+  '06 Oct · Morphine 10mg · 60 out',
+  '06 Oct · Hydromorphone 2mg · 40 in',
+  '05 Oct · Oxycodone 5mg · 45 out',
 ]
 
 const features = [
@@ -186,18 +194,33 @@ export default function Page() {
           <div className="nav-links">
             <a href="#how-it-works">How it works</a>
             <a href="#security">Audit trail</a>
-            <Link className="nav-chat" href="/chat">
-              <MessagesSquare className="nav-chat-icon" aria-hidden="true" />
-              Chat with Home
-            </Link>
             <button className="nav-signin" onClick={() => openAuth('sign-in')}>
               Sign in
             </button>
             <button className="nav-cta" onClick={() => openAuth('sign-up')}>
-              Get started <span aria-hidden="true">↗</span>
+              Book a demo
             </button>
           </div>
         </nav>
+
+        <div className="ticker">
+          <p className="ticker-label">
+            <span className="ticker-dot" aria-hidden="true" />
+            Live register
+          </p>
+          <div className="ticker-track" aria-hidden="true">
+            <div className="ticker-run">
+              {[...tickerEntries, ...tickerEntries].map((entry, index) => (
+                <span className="ticker-item" key={`${entry}-${index}`}>
+                  {entry}
+                </span>
+              ))}
+            </div>
+          </div>
+          <p className="ticker-scroll">
+            Scroll <span aria-hidden="true">↓</span>
+          </p>
+        </div>
 
         <section className="hero" id="top">
           <div className="hero-copy">
@@ -207,13 +230,12 @@ export default function Page() {
             <h1 className="hero-title" data-reveal>
               <span className="hero-line">Every controlled</span>
               <span className="hero-line">
-                substance, <em>counted</em>
+                substance, <em>COUNTED</em>
               </span>
               <span className="hero-line">and signed.</span>
             </h1>
             <p className="hero-description" data-reveal>
-              A focused workspace for keeping generic substitutions accurate, accessible, and accountable — from the
-              counter to the back office.
+              Built with audit trails and electronic signatures for pharmaceutical and care operations teams.
             </p>
             <div className="hero-actions" data-reveal>
               <button className="solid-button" onClick={() => openAuth('sign-up')}>
@@ -264,8 +286,18 @@ export default function Page() {
               </div>
             </div>
 
-            <p className="ledger-chip ledger-chip-count">Counted today 128</p>
-            <p className="ledger-chip ledger-chip-sign">JD · 09:42 / SM · 09:44</p>
+            <div className="ledger-chip ledger-chip-count">
+              <span className="ledger-chip-label">Counted today</span>
+              <span className="ledger-chip-value">128</span>
+            </div>
+            <p className="ledger-chip ledger-chip-sign">
+              <span className="ledger-chip-line">
+                <b>JD</b> · 09:42
+              </span>
+              <span className="ledger-chip-line">
+                <b>SM</b> · 09:44
+              </span>
+            </p>
             <p className="ledger-chip ledger-chip-alert">Discrepancy detected: Oxycodone 5mg, count off by 2</p>
           </div>
         </section>
