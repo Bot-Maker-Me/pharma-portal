@@ -32,13 +32,39 @@ export default function Page() {
   const [hasScrolled, setHasScrolled] = useState(false)
 
   useEffect(() => {
-    // Section reveals are pure CSS (see globals.css) so nothing can be left
-    // invisible if this script never runs.
     const onScroll = () => setHasScrolled(window.scrollY > 24)
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
+
+    const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'))
+    const root = document.documentElement
+
+    // Reduced motion: show everything up front and never hide a thing.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      nodes.forEach((node) => node.classList.add('is-revealed'))
+      return () => window.removeEventListener('scroll', onScroll)
+    }
+
+    // `reveal-ready` is set from script, never from the markup, so a blocked
+    // script can't leave the page blank.
+    root.classList.add('reveal-ready')
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          // Toggled both ways, so copy fades in on the way in and back out on
+          // the way past.
+          entry.target.classList.toggle('is-revealed', entry.isIntersecting)
+        })
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -6% 0px' },
+    )
+    nodes.forEach((node) => observer.observe(node))
+
     return () => {
       window.removeEventListener('scroll', onScroll)
+      observer.disconnect()
+      root.classList.remove('reveal-ready')
     }
   }, [])
 
@@ -175,19 +201,21 @@ export default function Page() {
 
         <section className="hero" id="top">
           <div className="hero-copy">
-            <p className="hero-label">§ 01 — The register</p>
-            <h1 className="hero-title">
+            <p className="hero-label" data-reveal>
+              § 01 — The register
+            </p>
+            <h1 className="hero-title" data-reveal>
               <span className="hero-line">Every controlled</span>
               <span className="hero-line">
                 substance, <em>counted</em>
               </span>
               <span className="hero-line">and signed.</span>
             </h1>
-            <p className="hero-description">
+            <p className="hero-description" data-reveal>
               A focused workspace for keeping generic substitutions accurate, accessible, and accountable — from the
               counter to the back office.
             </p>
-            <div className="hero-actions">
+            <div className="hero-actions" data-reveal>
               <button className="solid-button" onClick={() => openAuth('sign-up')}>
                 Book a demo
               </button>
@@ -244,7 +272,7 @@ export default function Page() {
 
         <section className="feature-strip" id="how-it-works">
           {features.map(([number, title, copy]) => (
-            <article key={number}>
+            <article key={number} data-reveal>
               <span className="feature-number">{number}</span>
               <h2>{title}</h2>
               <p>{copy}</p>
@@ -253,21 +281,21 @@ export default function Page() {
         </section>
 
         <section className="statement" id="security">
-          <p className="eyebrow">
+          <p className="eyebrow" data-reveal>
             <span className="eyebrow-line" /> MADE FOR PHARMACY TEAMS
           </p>
-          <h2>Your formulary should be as dependable as the care you provide.</h2>
-          <button className="text-link" onClick={() => openAuth('sign-in')}>
+          <h2 data-reveal>Your formulary should be as dependable as the care you provide.</h2>
+          <button className="text-link" data-reveal onClick={() => openAuth('sign-in')}>
             See the workspace <span>↗</span>
           </button>
         </section>
 
         <footer>
-          <a className="wordmark" href="#top">
+          <a className="wordmark" href="#top" data-reveal>
             <span className="wordmark-mark">+</span> formulary
           </a>
-          <span>Clear choices. Better care.</span>
-          <span>© 2026 Formulary</span>
+          <span data-reveal>Clear choices. Better care.</span>
+          <span data-reveal>© 2026 Formulary</span>
         </footer>
       </main>
     </div>

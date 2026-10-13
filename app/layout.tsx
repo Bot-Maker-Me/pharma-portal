@@ -1,6 +1,31 @@
 import { Analytics } from '@vercel/analytics/next'
+import { Bricolage_Grotesque, IBM_Plex_Mono, Manrope } from 'next/font/google'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+
+// Self-hosted through next/font, not a <link> to fonts.googleapis.com. A
+// cross-origin stylesheet in the document makes Next's dev tooling throw
+// "Failed to read the 'cssRules' property from 'CSSStyleSheet'" whenever it
+// walks document.styleSheets, and it also costs a render-blocking round trip.
+const manrope = Manrope({
+  subsets: ['latin'],
+  variable: '--font-manrope',
+  display: 'swap',
+})
+
+const display = Bricolage_Grotesque({
+  subsets: ['latin'],
+  axes: ['opsz'],
+  variable: '--font-display',
+  display: 'swap',
+})
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-plex-mono',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'Formulary — pharmacy workspace & Chat with Home',
@@ -39,18 +64,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${manrope.variable} ${display.variable} ${plexMono.variable}`}>
       <body className="antialiased">
-        {/* The three faces the theme is built on. They load from Google Fonts so a
-            blocked or offline request degrades to the system stack instead of
-            failing the build. */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          rel="stylesheet"
-          precedence="default"
-          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=IBM+Plex+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
-        />
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
