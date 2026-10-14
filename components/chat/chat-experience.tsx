@@ -8,6 +8,7 @@ import { useChatData } from '@/lib/chat/use-chat'
 import { initialsFromName } from '@/lib/chat/format'
 import { tenantThemeClass } from '@/lib/tenant/theme'
 import type { ChatIdentity } from '@/lib/chat/types'
+import { NotificationBanner } from '@/components/push/notification-banner'
 import { ConversationList } from './conversation-list'
 import { MessageThread } from './message-thread'
 import { ThreadPlaceholder } from './chat-states'
@@ -63,6 +64,8 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
           </span>
         </div>
       </header>
+
+      <NotificationBanner />
 
       {chat.mode === 'preview' && (
         <div className="flex items-start gap-2 border-b border-line bg-sage/10 px-4 py-2.5 text-[11px] text-ink-soft sm:px-6">

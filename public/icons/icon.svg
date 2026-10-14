@@ -1,0 +1,11 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Pharma Portal app icon.
+       Drawn to the maskable safe zone: every shape stays inside the inner 80%
+       circle, so Android can crop it to a circle, squircle or rounded square
+       without clipping the mark. -->
+  <rect width="512" height="512" fill="#0b1220" />
+  <g fill="#d8232f">
+    <rect x="226" y="126" width="60" height="260" rx="14" />
+    <rect x="126" y="226" width="260" height="60" rx="14" />
+  </g>
+</svg>

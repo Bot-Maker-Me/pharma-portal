@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient as createSupabaseClient } from '@/lib/supabase/client'
+import { NotificationSettings } from '@/components/push/notification-settings'
 import { workspaceSections } from '@/lib/workspace/sections'
 import { tenantThemeClass, type TenantTheme } from '@/lib/tenant/theme'
 import type { WorkspaceData } from '@/lib/workspace/types'
@@ -305,7 +306,8 @@ export function WorkspaceView({
                 <dd>{isPlatformAdmin ? 'Platform admin' : 'Authorized partner'}</dd>
               </div>
             </dl>
-            <button type="button" className="ws-signout-button" onClick={handleSignOut}>
+            <NotificationSettings />
+            <button type="button" className="ws-signout-button mt-4" onClick={handleSignOut}>
               <LogOut className="ws-nav-icon" aria-hidden="true" />
               Sign out
             </button>

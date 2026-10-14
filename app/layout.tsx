@@ -1,6 +1,7 @@
 import { Analytics } from '@vercel/analytics/next'
 import { IBM_Plex_Mono, Manrope, Playfair_Display } from 'next/font/google'
 import type { Metadata, Viewport } from 'next'
+import { ServiceWorkerRegistrar } from '@/components/push/service-worker-registrar'
 import './globals.css'
 
 // Self-hosted through next/font, not a <link> to fonts.googleapis.com. A
@@ -49,6 +50,15 @@ export const metadata: Metadata = {
     ],
     apple: '/apple-icon.png',
   },
+  // Makes the portal installable. On iPhone this is what turns "Add to Home
+  // Screen" into an app that can receive notifications at all — Safari only
+  // delivers Web Push to an installed app, never to a browser tab.
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    title: 'Pharma Portal',
+    statusBarStyle: 'default',
+  },
 }
 
 export const viewport: Viewport = {
@@ -68,6 +78,7 @@ export default function RootLayout({
     <html lang="en" className={`${manrope.variable} ${serif.variable} ${plexMono.variable}`}>
       <body className="antialiased">
         {children}
+        <ServiceWorkerRegistrar />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
