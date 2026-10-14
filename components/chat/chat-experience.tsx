@@ -36,7 +36,7 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
     <div className={cn('chat-shell bg-paper', tenantThemeClass(identity.theme))}>
       <header className="flex items-center gap-3 border-b border-line bg-surface px-4 py-3 sm:px-6">
         <Link
-          href="/"
+          href="/workspace"
           className="inline-flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 text-xs font-semibold text-ink-soft transition hover:bg-paper-deep"
         >
           <ArrowLeft className="size-3.5" aria-hidden="true" />
