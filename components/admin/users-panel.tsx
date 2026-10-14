@@ -208,7 +208,7 @@ export function UsersPanel({ users, homes, tenants, onChanged }: UsersPanelProps
                 <span className="admin-count">{selected.homeIds.length} assigned</span>
               </div>
               <p className="admin-card-hint">
-                Ticked homes appear in this user&apos;s Chat with Pharmacy. Changes apply immediately.
+                Ticked homes appear in this user&apos;s Chat with Home. Changes apply immediately.
               </p>
               {homes.length === 0 ? (
                 <p className="admin-empty">No nursing homes exist yet — add some in the Nursing homes tab.</p>

@@ -41,7 +41,7 @@ export function HomesPanel({ homes, onChanged }: { homes: AdminHome[]; onChanged
       <div className="admin-card">
         <h2 className="admin-card-title">Add a nursing home</h2>
         <p className="admin-card-hint">
-          Homes appear in Chat with Pharmacy for every user you grant access to. Grant access from the Users tab.
+          Homes appear in Chat with Home for every user you grant access to. Grant access from the Users tab.
         </p>
         <div className="mt-4 flex flex-wrap items-end gap-3">
           <label className="admin-field flex-1">

@@ -25,6 +25,7 @@ import {
 import { cn } from '@/lib/utils'
 import { createClient as createSupabaseClient } from '@/lib/supabase/client'
 import { NotificationSettings } from '@/components/push/notification-settings'
+import { chatWithHomeFeatureKey } from '@/lib/features/registry'
 import { workspaceSections } from '@/lib/workspace/sections'
 import { tenantThemeClass, type TenantTheme } from '@/lib/tenant/theme'
 import type { WorkspaceData } from '@/lib/workspace/types'
@@ -109,7 +110,7 @@ export function WorkspaceView({
   // Extras are the gated half of the rail: a pharmacy only sees one here once an
   // administrator has granted it.
   const customFeatures = features.filter((feature) => feature.type === 'custom')
-  const chatFeature = customFeatures.find((feature) => feature.key === 'chat-with-pharmacy') ?? null
+  const chatFeature = customFeatures.find((feature) => feature.key === chatWithHomeFeatureKey) ?? null
 
   const sectionContent = data.content.filter((item) => item.section === section)
   const activeSection = workspaceSections.find((item) => item.key === section)

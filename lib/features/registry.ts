@@ -1,5 +1,12 @@
 import type { ComponentType } from 'react'
 
+/**
+ * The messaging feature's key. Named here rather than repeated as a literal,
+ * because the route guard (`app/chat/page.tsx`) and the workspace rail both have
+ * to ask whether this one pharmacy has been granted it.
+ */
+export const chatWithHomeFeatureKey = 'chat-with-home'
+
 // Base features are part of every pharmacy's workspace. Custom features stay
 // switched off until a platform administrator grants them to a specific
 // pharmacy from the admin console — see public.tenant_features.
@@ -24,7 +31,7 @@ export const featureRegistry: FeatureDefinition[] = [
   { key: 'delivery-slips', name: 'Delivery Slips', description: 'Prepare and manage delivery slips.', type: 'base', sidebar: { label: 'Delivery Slips', icon: 'truck', route: '/workspace/delivery-slips' }, route: '/workspace/delivery-slips' },
   { key: 'signing-sheet', name: 'Signing Sheet', description: 'Daily sign-off records.', type: 'base', sidebar: { label: 'Signing Sheet', icon: 'pen', route: '/workspace/signing-sheet' }, route: '/workspace/signing-sheet' },
   { key: 'vaccine-wait-list', name: 'Vaccine Wait List', description: 'Manage vaccine requests and wait lists.', type: 'base', sidebar: { label: 'Vaccine Wait List', icon: 'syringe', route: '/workspace/vaccine-wait-list' }, route: '/workspace/vaccine-wait-list' },
-  { key: 'chat-with-pharmacy', name: 'Chat with Pharmacy', description: 'Secure messaging between the pharmacy and the nursing homes it serves. Granted per pharmacy by an administrator.', type: 'custom', sidebar: { label: 'Chat with Pharmacy', icon: 'message', route: '/chat' }, route: '/chat' },
+  { key: chatWithHomeFeatureKey, name: 'Chat with Home', description: 'Secure messaging between the pharmacy and the nursing homes it serves. Granted per pharmacy by an administrator.', type: 'custom', sidebar: { label: 'Chat with Home', icon: 'message', route: '/chat' }, route: '/chat' },
 ]
 
 export function getFeature(featureKey: string) { return featureRegistry.find((feature) => feature.key === featureKey) }

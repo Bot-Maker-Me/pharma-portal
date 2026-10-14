@@ -9,7 +9,7 @@ export default function ChatError({ error, reset }: { error: Error; reset: () =>
         <AlertTriangle className="size-5" aria-hidden="true" />
       </span>
       <div>
-        <p className="text-sm font-semibold text-ink">Chat with Pharmacy hit a problem</p>
+        <p className="text-sm font-semibold text-ink">Chat with Home hit a problem</p>
         <p className="mt-1 max-w-sm text-xs text-ink-soft">{error.message || 'Please try again in a moment.'}</p>
       </div>
       <button

@@ -95,7 +95,7 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 @layer base { * { border-color: var(--line); } }
 
 /* ---------------------------------------------------------------------------
-   Chat with Pharmacy — shared messaging between the Pharma and Nursing Home portals
+   Chat with Home — shared messaging between the Pharma and Nursing Home portals
 --------------------------------------------------------------------------- */
 .sidebar-link { text-decoration: none; }
 .sidebar-link:hover { color: var(--white); background: rgba(255,255,255,.08); }

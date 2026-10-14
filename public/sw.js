@@ -10,9 +10,12 @@
 
 const DEFAULT_TITLE = 'New message'
 const DEFAULT_BODY = 'You have a new message from the pharmacy'
-const DEFAULT_URL = '/chat'
+/** The screen a notification opens, and the path a focused window is routed to. */
+const CHAT_PATH = '/chat'
 const ICON = '/icons/icon.svg'
 const BADGE = '/icon-light-32x32.png'
+/** Message the app listens for when the window cannot be navigated directly. */
+const NAVIGATE_MESSAGE = 'pharma-portal:navigate'
 
 /* ---------------------------------------------------------------------------
  * PRIVACY GUARD
@@ -44,8 +47,8 @@ function safeText(value, pattern, fallback) {
  * turn a notification tap into an open redirect.
  */
 function safeUrl(value) {
-  if (typeof value !== 'string') return DEFAULT_URL
-  return /^\/[A-Za-z0-9\-._~!$&'()*+,;=:@%/]*$/.test(value) ? value : DEFAULT_URL
+  if (typeof value !== 'string') return CHAT_PATH
+  return /^\/[A-Za-z0-9\-._~!$&'()*+,;=:@%/]*$/.test(value) ? value : CHAT_PATH
 }
 
 function originOf(value) {
@@ -53,6 +56,16 @@ function originOf(value) {
     return new URL(value).origin
   } catch {
     return null
+  }
+}
+
+/** Compares windows by screen rather than by exact string, so `?query` and
+ *  trailing slashes do not count as "a different place". */
+function pathnameOf(value) {
+  try {
+    return new URL(value).pathname.replace(/\/+$/, '') || '/'
+  } catch {
+    return ''
   }
 }
 
@@ -95,31 +108,69 @@ self.addEventListener('push', (event) => {
   )
 })
 
+/* ---------------------------------------------------------------------------
+ * Notification tap.
+ *
+ * The rule this handler exists to enforce: **never open a second window while the
+ * portal is already open somewhere.** A new tab beside a running portal is what a
+ * "the chat opened in an external tab" report looks like, and it used to happen
+ * on Safari and older Firefox — neither implements `WindowClient.navigate`, so
+ * the old "can I navigate it? no → open a window" check spawned a new window
+ * instead of reusing the one already on screen.
+ *
+ * `openWindow` is therefore reachable only when there is provably no portal
+ * window at all.
+ * ------------------------------------------------------------------------- */
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
 
   const targetPath = safeUrl(event.notification.data && event.notification.data.url)
   const targetUrl = new URL(targetPath, self.location.origin).href
+  const targetPathname = pathnameOf(targetUrl)
+  const chatPathname = pathnameOf(CHAT_PATH)
 
   event.waitUntil(
     (async () => {
       const windowClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      const portal = windowClients.filter((client) => originOf(client.url) === self.location.origin)
 
-      // 1. A portal window already showing the target screen — just bring it forward.
-      for (const client of windowClients) {
-        if (client.url === targetUrl && 'focus' in client) return client.focus()
+      // 1. A portal window is already showing that screen — just bring it forward.
+      //    Re-navigating it here would throw away the reader's scroll position.
+      const onTarget = portal.find((client) => pathnameOf(client.url) === targetPathname)
+      if (onTarget) {
+        if ('focus' in onTarget) await onTarget.focus()
+        return
       }
 
-      // 2. Another portal window is open — send it to the target, then focus it.
-      const sameOrigin = windowClients.find((client) => originOf(client.url) === self.location.origin)
-      if (sameOrigin && 'navigate' in sameOrigin) {
-        await sameOrigin.navigate(targetUrl).catch(() => undefined)
-        return 'focus' in sameOrigin ? sameOrigin.focus() : undefined
+      // 2. Reuse an open portal window: prefer one already in chat, otherwise
+      //    any of them.
+      const reusable = portal.find((client) => pathnameOf(client.url) === chatPathname) ?? portal[0] ?? null
+
+      if (reusable) {
+        if ('navigate' in reusable) {
+          const navigated = await reusable.navigate(targetUrl).catch(() => null)
+          if (navigated) {
+            if ('focus' in navigated) await navigated.focus()
+            return
+          }
+        }
+
+        // `navigate` missing or refused: focus the window we have, then ask the
+        // app to route itself. Both are better than a second window.
+        if ('focus' in reusable) await reusable.focus()
+        try {
+          reusable.postMessage({ type: NAVIGATE_MESSAGE, url: targetPath })
+        } catch {
+          // An uncontrolled client cannot receive messages. It is already
+          // focused, which is the part that matters.
+        }
+        return
       }
 
-      // 3. Nothing open — open a new window.
-      if (self.clients.openWindow) return self.clients.openWindow(targetUrl)
-      return undefined
+      // 3. Nothing open at all — the only path that opens anything.
+      if (self.clients.openWindow) {
+        await self.clients.openWindow(targetUrl)
+      }
     })(),
   )
 })

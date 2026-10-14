@@ -206,7 +206,7 @@ export function AdminConsole({ adminEmail }: { adminEmail: string }) {
             </Link>
             <Link className="admin-ghost-button" href="/chat">
               <MessagesSquare className="size-3.5" aria-hidden="true" />
-              Chat with Pharmacy
+              Chat with Home
             </Link>
           </div>
         </header>
