@@ -13,7 +13,7 @@ import { ConversationList } from './conversation-list'
 import { MessageThread } from './message-thread'
 import { ThreadPlaceholder } from './chat-states'
 
-export function ChatExperience({ identity }: { identity: ChatIdentity }) {
+export function ChatExperience({ identity, embedded = false }: { identity: ChatIdentity; embedded?: boolean }) {
   const chat = useChatData()
   const [pane, setPane] = useState<'list' | 'thread'>('list')
 
@@ -33,7 +33,10 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
   }
 
   return (
-    <div className={cn('chat-shell bg-paper', tenantThemeClass(identity.theme))}>
+    <div className={cn('chat-shell bg-paper', embedded && 'chat-shell--embedded', tenantThemeClass(identity.theme))}>
+      {/* Embedded inside the workspace, the rail already brands the page and
+          carries the navigation — so the chat drops its own header and back link. */}
+      {!embedded && (
       <header className="flex items-center gap-3 border-b border-line bg-surface px-4 py-3 sm:px-6">
         <Link
           href="/workspace"
@@ -64,6 +67,7 @@ export function ChatExperience({ identity }: { identity: ChatIdentity }) {
           </span>
         </div>
       </header>
+      )}
 
       <NotificationBanner />
 

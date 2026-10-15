@@ -25,9 +25,11 @@ import {
 import { cn } from '@/lib/utils'
 import { createClient as createSupabaseClient } from '@/lib/supabase/client'
 import { NotificationSettings } from '@/components/push/notification-settings'
+import { ChatExperience } from '@/components/chat/chat-experience'
 import { chatWithHomeFeatureKey } from '@/lib/features/registry'
 import { workspaceSections } from '@/lib/workspace/sections'
 import { tenantThemeClass, type TenantTheme } from '@/lib/tenant/theme'
+import type { ChatIdentity } from '@/lib/chat/types'
 import type { WorkspaceData } from '@/lib/workspace/types'
 
 // One icon per content section, so the rail reads at a glance.
@@ -116,6 +118,18 @@ export function WorkspaceView({
   const activeSection = workspaceSections.find((item) => item.key === section)
   const displayName = userEmail ? userEmail.split('@')[0].replace(/[._-]+/g, ' ') : 'signed in'
 
+  // Chat with Home runs *inside* the workspace rather than as a separate page, so
+  // the pharmacy keeps its rail and never bounces out to a new tab. Its identity
+  // is assembled from what the workspace already holds.
+  const chatIdentity: ChatIdentity = {
+    configured: !preview,
+    signedIn: !preview,
+    userId: null,
+    displayName,
+    organization: tenantName,
+    theme,
+  }
+
   async function handleSignOut() {
     const supabase = createSupabaseClient()
     if (supabase) await supabase.auth.signOut()
@@ -135,9 +149,14 @@ export function WorkspaceView({
             <span>Portal</span>
           </div>
           {chatFeature && (
-            <Link className="ws-bell" href={chatFeature.sidebar.route} aria-label="Messages and notifications">
+            <button
+              type="button"
+              className="ws-bell"
+              onClick={() => setSection('chat')}
+              aria-label="Messages and notifications"
+            >
               <Bell className="ws-nav-icon" aria-hidden="true" />
-            </Link>
+            </button>
           )}
         </div>
 
@@ -176,6 +195,22 @@ export function WorkspaceView({
 
           {customFeatures.map((feature) => {
             const Icon = featureIcons[feature.sidebar.icon] ?? MessagesSquare
+            // Chat with Home opens as a panel of this workspace (like the nursing
+            // home app), not as a separate /chat page in its own tab.
+            if (feature.key === chatWithHomeFeatureKey) {
+              return (
+                <button
+                  key={feature.key}
+                  type="button"
+                  onClick={() => setSection('chat')}
+                  aria-current={section === 'chat' ? 'true' : undefined}
+                  className={cn('ws-nav-row', section === 'chat' && 'is-active')}
+                >
+                  <Icon className="ws-nav-icon" aria-hidden="true" />
+                  <span className="truncate">{feature.sidebar.label}</span>
+                </button>
+              )
+            }
             return (
               <Link key={feature.key} className="ws-nav-row" href={feature.sidebar.route}>
                 <Icon className="ws-nav-icon" aria-hidden="true" />
@@ -216,8 +251,8 @@ export function WorkspaceView({
         </div>
       </aside>
 
-      <main className="ws-main">
-        {preview && (
+      <main className={cn('ws-main', section === 'chat' && 'ws-chat-main')}>
+        {preview && section !== 'chat' && (
           <div className="mb-5 flex items-start gap-2 border border-line bg-sage/10 p-3 text-xs text-ink-soft">
             <Info className="mt-0.5 size-3.5 shrink-0 text-evergreen" aria-hidden="true" />
             <p>
@@ -315,7 +350,9 @@ export function WorkspaceView({
           </>
         )}
 
-        {section !== 'formulary' && section !== 'account' && (
+        {section === 'chat' && chatFeature && <ChatExperience identity={chatIdentity} embedded />}
+
+        {section !== 'formulary' && section !== 'account' && section !== 'chat' && (
           <>
             <h1 className="ws-title">{activeSection?.label ?? section}</h1>
             {activeSection && <p className="ws-subtitle">{activeSection.hint}</p>}

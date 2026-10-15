@@ -219,6 +219,11 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 .ws-frame { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 100dvh; }
 .ws-sidebar { display: flex; flex-direction: column; border-bottom: 1px solid var(--line); background: var(--white); padding: 18px 14px 14px; }
 .ws-main { min-width: 0; padding: 22px 20px 56px; }
+/* Chat with Home is a panel of the workspace, not a page: it owns the whole main
+   column and supplies its own padding, so the rail stays put and nothing scrolls. */
+.ws-main.ws-chat-main { padding: 0; }
+/* Fills the workspace main column, which is one viewport tall. */
+.chat-shell--embedded { height: 100%; min-height: 100dvh; }
 .ws-sidebar-head { display: flex; align-items: flex-start; gap: 10px; padding: 2px 6px 0; }
 .ws-brand-mark { display: flex; width: 30px; height: 30px; flex: 0 0 30px; align-items: center; justify-content: center; border-radius: 8px; background: var(--evergreen); color: #fff; font-size: 19px; line-height: 1; font-weight: 400; }
 .ws-brand-name { min-width: 0; }
