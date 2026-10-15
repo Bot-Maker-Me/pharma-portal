@@ -2,6 +2,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { IBM_Plex_Mono, Manrope, Playfair_Display } from 'next/font/google'
 import type { Metadata, Viewport } from 'next'
 import { ServiceWorkerRegistrar } from '@/components/push/service-worker-registrar'
+import { MessageNotifier } from '@/components/push/message-notifier'
 import './globals.css'
 
 // Self-hosted through next/font, not a <link> to fonts.googleapis.com. A
@@ -79,6 +80,7 @@ export default function RootLayout({
       <body className="antialiased">
         {children}
         <ServiceWorkerRegistrar />
+        <MessageNotifier />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
