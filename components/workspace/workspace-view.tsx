@@ -307,7 +307,7 @@ export function WorkspaceView({
                 <dd>{isPlatformAdmin ? 'Platform admin' : 'Authorized partner'}</dd>
               </div>
             </dl>
-            <NotificationSettings />
+            <NotificationSettings isPlatformAdmin={isPlatformAdmin} />
             <button type="button" className="ws-signout-button mt-4" onClick={handleSignOut}>
               <LogOut className="ws-nav-icon" aria-hidden="true" />
               Sign out

@@ -9,12 +9,40 @@
  * never be added to this app, to `.env.local`, or to any `NEXT_PUBLIC_*` variable:
  * anything prefixed `NEXT_PUBLIC_` is inlined into the JavaScript every visitor
  * downloads.
+ *
+ * This is a Next.js app, so the variable is `NEXT_PUBLIC_VAPID_PUBLIC_KEY`. The
+ * reference below must stay statically written as `process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY`
+ * — Next.js inlines that exact expression at build time, but it cannot inline a
+ * dynamic lookup such as `process.env[name]`, which would arrive `undefined`.
  */
-export const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ''
+const rawVapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ''
 
-/** True when the deployment has a public key to subscribe with. */
+/** Drop line breaks and any stray spaces a copy-paste into the dashboard added. */
+function cleanVapidPublicKey(value: string): string {
+  return value.replace(/\s+/g, '')
+}
+
+/** The public key, cleaned, or an empty string when the deployment has none. */
+export const vapidPublicKey = cleanVapidPublicKey(rawVapidPublicKey)
+
+/** Why the key cannot be used, or `configured` when it is ready. */
+export type VapidKeyStatus = 'configured' | 'missing' | 'invalid'
+
+/**
+ * A VAPID public key is an uncompressed P-256 point in URL-safe base64: it starts
+ * with "B", is ~87 characters long, and only uses `A-Z a-z 0-9 - _`.
+ */
+export function vapidKeyStatus(): VapidKeyStatus {
+  if (vapidPublicKey.length === 0) return 'missing'
+  if (!vapidPublicKey.startsWith('B')) return 'invalid'
+  if (vapidPublicKey.length < 85 || vapidPublicKey.length > 90) return 'invalid'
+  if (!/^[A-Za-z0-9_-]+$/.test(vapidPublicKey)) return 'invalid'
+  return 'configured'
+}
+
+/** True when the deployment has a usable public key to subscribe with. */
 export function hasVapidPublicKey(): boolean {
-  return vapidPublicKey.length > 0
+  return vapidKeyStatus() === 'configured'
 }
 
 /**

@@ -3,15 +3,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import { registerServiceWorker } from './register'
 import { deleteSubscriptionRow, isEndpointStored, resolveTenantId, saveSubscription } from './subscriptions'
-import { hasVapidPublicKey, urlBase64ToUint8Array, vapidPublicKey } from './vapid'
+import { hasVapidPublicKey, urlBase64ToUint8Array, vapidKeyStatus, vapidPublicKey } from './vapid'
 
 /**
  * Why the toggle is in the state it is in. `unsupported` and `ios-needs-install`
  * are deliberately separate: on an iPhone in a Safari tab the API genuinely does
  * not exist, but the fix is "add it to your Home Screen", not "your browser is
  * too old" — so the UI has to be able to tell them apart.
+ *
+ * `unconfigured` (no key at all) and `invalid-key` (a key that cannot be a VAPID
+ * key) are separate too, so the message can say which of the two it is.
  */
-export type PushSupport = 'checking' | 'unsupported' | 'ios-needs-install' | 'unconfigured' | 'ready'
+export type PushSupport = 'checking' | 'unsupported' | 'ios-needs-install' | 'unconfigured' | 'invalid-key' | 'ready'
 
 export type PushController = {
   support: PushSupport
@@ -20,6 +23,10 @@ export type PushController = {
   subscribed: boolean
   /** Whether the server has that subscription on file. `null` until it is asked. */
   savedToServer: boolean | null
+  /** A valid `NEXT_PUBLIC_VAPID_PUBLIC_KEY` is present at build time. */
+  keyConfigured: boolean
+  /** `/sw.js` is registered for this page. */
+  serviceWorkerRegistered: boolean
   busy: boolean
   error: string | null
   enable: () => Promise<void>
@@ -50,6 +57,7 @@ export function usePushNotifications(): PushController {
   const [permission, setPermission] = useState<NotificationPermission | null>(null)
   const [subscribed, setSubscribed] = useState(false)
   const [savedToServer, setSavedToServer] = useState<boolean | null>(null)
+  const [serviceWorkerRegistered, setServiceWorkerRegistered] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -70,14 +78,17 @@ export function usePushNotifications(): PushController {
         if (!cancelled) setSupport('unsupported')
         return
       }
-      if (!hasVapidPublicKey()) {
-        if (!cancelled) setSupport('unconfigured')
+
+      const keyStatus = vapidKeyStatus()
+      if (keyStatus !== 'configured') {
+        if (!cancelled) setSupport(keyStatus === 'missing' ? 'unconfigured' : 'invalid-key')
         return
       }
       if (!cancelled) setSupport('ready')
 
       const registration =
         (await navigator.serviceWorker.getRegistration('/')) ?? (await registerServiceWorker())
+      if (!cancelled) setServiceWorkerRegistered(Boolean(registration))
       const subscription = await registration?.pushManager.getSubscription().catch(() => null)
       if (cancelled || !subscription) return
 
@@ -102,8 +113,14 @@ export function usePushNotifications(): PushController {
         setError('This browser cannot show notifications.')
         return
       }
-      if (!hasVapidPublicKey()) {
-        setError('This deployment has no NEXT_PUBLIC_VAPID_PUBLIC_KEY set, so a subscription cannot be created.')
+
+      const keyStatus = vapidKeyStatus()
+      if (keyStatus !== 'configured') {
+        setError(
+          keyStatus === 'missing'
+            ? 'This deployment has no NEXT_PUBLIC_VAPID_PUBLIC_KEY set, so a subscription cannot be created.'
+            : 'NEXT_PUBLIC_VAPID_PUBLIC_KEY is set but is not a valid VAPID public key. It should be an ~87-character URL-safe base64 string that starts with "B".',
+        )
         return
       }
 
@@ -126,6 +143,7 @@ export function usePushNotifications(): PushController {
         setError('The notification worker is not available. Reload the page and try again.')
         return
       }
+      setServiceWorkerRegistered(true)
       await navigator.serviceWorker.ready
 
       const existing = await registration.pushManager.getSubscription().catch(() => null)
@@ -177,5 +195,16 @@ export function usePushNotifications(): PushController {
     }
   }, [busy])
 
-  return { support, permission, subscribed, savedToServer, busy, error, enable, disable }
+  return {
+    support,
+    permission,
+    subscribed,
+    savedToServer,
+    keyConfigured: hasVapidPublicKey(),
+    serviceWorkerRegistered,
+    busy,
+    error,
+    enable,
+    disable,
+  }
 }

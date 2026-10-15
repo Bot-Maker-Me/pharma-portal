@@ -12,8 +12,11 @@ const secondaryButton =
 /**
  * The Account → Notifications control: one device at a time, with every outcome
  * spelled out rather than a single button that silently does nothing.
+ *
+ * Platform admins additionally see a one-line diagnostic (never the key itself)
+ * so a broken deployment can be told apart from a blocked browser.
  */
-export function NotificationSettings() {
+export function NotificationSettings({ isPlatformAdmin = false }: { isPlatformAdmin?: boolean }) {
   const push = usePushNotifications()
 
   const blocked = push.permission === 'denied'
@@ -53,6 +56,16 @@ export function NotificationSettings() {
           <p>
             Notifications are not configured on this deployment yet. An administrator needs to set the{' '}
             <code className="font-mono text-[11px]">NEXT_PUBLIC_VAPID_PUBLIC_KEY</code> environment variable.
+          </p>
+        )
+
+      case 'invalid-key':
+        return (
+          <p>
+            Notifications are misconfigured on this deployment. The{' '}
+            <code className="font-mono text-[11px]">NEXT_PUBLIC_VAPID_PUBLIC_KEY</code> environment variable is set
+            but is not a valid VAPID public key — it should be an ~87-character URL-safe base64 string starting with{' '}
+            <code className="font-mono text-[11px]">B</code>, with no spaces or line breaks.
           </p>
         )
 
@@ -130,6 +143,15 @@ export function NotificationSettings() {
           {push.error && (
             <p className="mt-2 text-xs leading-relaxed text-coral" role="alert">
               {push.error}
+            </p>
+          )}
+
+          {isPlatformAdmin && (
+            <p className="mt-3 border-t border-line pt-2 text-[11px] leading-relaxed text-ink-soft">
+              <span className="font-semibold text-ink">Diagnostics</span> (admin only): key configured{' '}
+              {push.keyConfigured ? 'yes' : 'no'} · service worker registered{' '}
+              {push.serviceWorkerRegistered ? 'yes' : 'no'} · permission {push.permission ?? 'unknown'} · subscription
+              saved {push.savedToServer === null ? 'unknown' : push.savedToServer ? 'yes' : 'no'}
             </p>
           )}
         </div>

@@ -67,7 +67,10 @@ export async function saveSubscription(input: {
     },
     { onConflict: 'endpoint' },
   )
-  if (error) throw new Error(error.message)
+  if (error) {
+    console.error('[push] failed to save subscription to push_subscriptions:', error)
+    throw new Error(error.message)
+  }
 }
 
 /** Removes this device's row. Best effort — the browser subscription is what matters. */
