@@ -13,7 +13,16 @@ import { ConversationList } from './conversation-list'
 import { MessageThread } from './message-thread'
 import { ThreadPlaceholder } from './chat-states'
 
-export function ChatExperience({ identity, embedded = false }: { identity: ChatIdentity; embedded?: boolean }) {
+export function ChatExperience({
+  identity,
+  embedded = false,
+  onExit,
+}: {
+  identity: ChatIdentity
+  embedded?: boolean
+  /** Embedded in the workspace: leave the chat and go back to the rail (mobile). */
+  onExit?: () => void
+}) {
   const chat = useChatData()
   const [pane, setPane] = useState<'list' | 'thread'>('list')
 
@@ -34,6 +43,24 @@ export function ChatExperience({ identity, embedded = false }: { identity: ChatI
 
   return (
     <div className={cn('chat-shell bg-paper', embedded && 'chat-shell--embedded', tenantThemeClass(identity.theme))}>
+      {/* On phones the rail steps aside so the chat can own the viewport; this is
+          the only way back to it. On desktop the rail is visible, so it's hidden. */}
+      {embedded && (
+        <header className="flex items-center gap-2 border-b border-line bg-surface px-3 py-2.5 lg:hidden">
+          {onExit && (
+            <button
+              type="button"
+              onClick={onExit}
+              className="inline-flex items-center gap-1 rounded-md border border-line px-2.5 py-1.5 text-xs font-semibold text-ink-soft transition hover:bg-paper-deep"
+            >
+              <ArrowLeft className="size-3.5" aria-hidden="true" />
+              Workspace
+            </button>
+          )}
+          <p className="truncate text-sm font-bold tracking-tight text-ink">Chat with Home</p>
+        </header>
+      )}
+
       {/* Embedded inside the workspace, the rail already brands the page and
           carries the navigation — so the chat drops its own header and back link. */}
       {!embedded && (

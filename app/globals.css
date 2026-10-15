@@ -222,8 +222,22 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 /* Chat with Home is a panel of the workspace, not a page: it owns the whole main
    column and supplies its own padding, so the rail stays put and nothing scrolls. */
 .ws-main.ws-chat-main { padding: 0; }
-/* Fills the workspace main column, which is one viewport tall. */
-.chat-shell--embedded { height: 100%; min-height: 100dvh; }
+/* The embedded chat fills the box given below (it no longer forces its own
+   viewport height, which is what let the page itself scroll). */
+.chat-shell--embedded { height: 100%; min-height: 0; }
+
+/* While the chat is open the workspace is locked to exactly one viewport, so the
+   only thing that scrolls is the message list (and the conversation list) —
+   never the page behind it. */
+.ws-frame--chat { height: 100dvh; min-height: 0; overflow: hidden; }
+.ws-frame--chat .ws-main.ws-chat-main { height: 100dvh; min-height: 0; overflow: hidden; }
+
+/* Phones/small tablets: the rail is a stacked row that would push the chat off
+   screen, so it steps aside while the chat owns the viewport. */
+@media (max-width: 1023px) {
+  .ws-frame--chat { grid-template-columns: minmax(0, 1fr); }
+  .ws-frame--chat .ws-sidebar { display: none; }
+}
 .ws-sidebar-head { display: flex; align-items: flex-start; gap: 10px; padding: 2px 6px 0; }
 .ws-brand-mark { display: flex; width: 30px; height: 30px; flex: 0 0 30px; align-items: center; justify-content: center; border-radius: 8px; background: var(--evergreen); color: #fff; font-size: 19px; line-height: 1; font-weight: 400; }
 .ws-brand-name { min-width: 0; }

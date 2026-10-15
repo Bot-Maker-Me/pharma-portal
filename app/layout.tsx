@@ -34,22 +34,13 @@ export const metadata: Metadata = {
   title: 'Pharma Portal — pharmacy workspace & Chat with Home',
   description:
     'A focused workspace for pharmacy formularies, plus secure real-time messaging between your pharmacy and the nursing homes you serve.',
+  // The only icon source is the Pharma Portal mark. The old Next/v0-generated
+  // PNGs (icon-light-32x32, icon-dark-32x32, apple-icon) are deliberately not
+  // referenced — the browser was picking one of those, which is why the tab still
+  // wore the v0 logo.
   icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
+    icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
+    apple: [{ url: '/icon.svg' }],
   },
   // Makes the portal installable. On iPhone this is what turns "Add to Home
   // Screen" into an app that can receive notifications at all — Safari only

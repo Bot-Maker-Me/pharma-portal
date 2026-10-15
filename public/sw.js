@@ -13,7 +13,7 @@ const DEFAULT_BODY = 'You have a new message from the pharmacy'
 /** The screen a notification opens, and the path a focused window is routed to. */
 const CHAT_PATH = '/chat'
 const ICON = '/icon.svg'
-const BADGE = '/icon-light-32x32.png'
+const BADGE = '/icon.svg'
 /** Message the app listens for when the window cannot be navigated directly. */
 const NAVIGATE_MESSAGE = 'pharma-portal:navigate'
 

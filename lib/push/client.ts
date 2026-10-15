@@ -146,13 +146,18 @@ export function usePushNotifications(): PushController {
       setServiceWorkerRegistered(true)
       await navigator.serviceWorker.ready
 
-      const existing = await registration.pushManager.getSubscription().catch(() => null)
-      const subscription =
-        existing ??
-        (await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-        }))
+      let subscription = await registration.pushManager.getSubscription().catch(() => null)
+      if (!subscription) {
+        try {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+          })
+        } catch (subscribeError) {
+          console.error('[push] pushManager.subscribe failed:', subscribeError)
+          throw subscribeError
+        }
+      }
 
       // Subscribed from here on, whether or not the server can be told — that
       // difference is exactly what `savedToServer` reports.
@@ -166,6 +171,7 @@ export function usePushNotifications(): PushController {
         throw saveFailure
       }
     } catch (failure: unknown) {
+      console.error('[push] enabling notifications failed:', failure)
       setError(failure instanceof Error ? failure.message : 'Notifications could not be enabled.')
     } finally {
       setBusy(false)

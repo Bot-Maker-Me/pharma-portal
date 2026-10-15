@@ -56,7 +56,7 @@ export function MessageNotifier() {
           const options: NotificationOptions = {
             body: NOTIFICATION_BODY,
             icon: '/icon.svg',
-            badge: '/icon-light-32x32.png',
+            badge: '/icon.svg',
             tag: NOTIFICATION_TAG,
             data: { url: '/chat' },
           }

@@ -138,7 +138,15 @@ export function WorkspaceView({
   }
 
   return (
-    <div className={cn('ws-shell ws-frame bg-paper', tenantThemeClass(theme))}>
+    <div
+      className={cn(
+        'ws-shell ws-frame bg-paper',
+        // Locking the frame to one viewport while the chat is open is what makes
+        // the message list scroll instead of the whole page.
+        section === 'chat' && 'ws-frame--chat',
+        tenantThemeClass(theme),
+      )}
+    >
       <aside className="ws-sidebar">
         <div className="ws-sidebar-head">
           <span className="ws-brand-mark" aria-hidden="true">
@@ -350,7 +358,9 @@ export function WorkspaceView({
           </>
         )}
 
-        {section === 'chat' && chatFeature && <ChatExperience identity={chatIdentity} embedded />}
+        {section === 'chat' && chatFeature && (
+          <ChatExperience identity={chatIdentity} embedded onExit={() => setSection('formulary')} />
+        )}
 
         {section !== 'formulary' && section !== 'account' && section !== 'chat' && (
           <>
