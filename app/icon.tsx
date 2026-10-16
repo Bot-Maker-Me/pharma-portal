@@ -1,12 +1,11 @@
 import { ImageResponse } from 'next/og'
 
 /**
- * The app/tab icon, generated as a PNG.
+ * The app/tab icon: the Pharma Portal mark — a white plus on the brand red tile,
+ * matching the `.wordmark-mark` used beside the wordmark on the site.
  *
- * `public/icon.svg` stays the vector source, but Safari (and iOS home-screen /
+ * `public/icon.svg` stays the vector twin, but Safari (and iOS home-screen /
  * notification surfaces) do not render SVG favicons, so they need a raster icon.
- * Emitting a PNG here keeps every surface on the Pharma Portal mark rather than
- * falling back to a browser default.
  */
 
 export const size = { width: 512, height: 512 }
@@ -22,30 +21,31 @@ export default function Icon() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#0b1220',
+          background: '#c8102e',
+          borderRadius: 116,
         }}
       >
-        <div style={{ position: 'relative', width: 272, height: 272, display: 'flex' }}>
+        <div style={{ position: 'relative', width: 300, height: 300, display: 'flex' }}>
           <div
             style={{
               position: 'absolute',
-              left: 106,
-              top: 0,
-              width: 60,
-              height: 272,
-              borderRadius: 16,
-              background: '#d8232f',
+              left: 0,
+              top: 117,
+              width: 300,
+              height: 66,
+              borderRadius: 8,
+              background: '#ffffff',
             }}
           />
           <div
             style={{
               position: 'absolute',
-              top: 106,
-              left: 0,
-              width: 272,
-              height: 60,
-              borderRadius: 16,
-              background: '#d8232f',
+              left: 117,
+              top: 0,
+              width: 66,
+              height: 300,
+              borderRadius: 8,
+              background: '#ffffff',
             }}
           />
         </div>

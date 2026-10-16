@@ -1,5 +1,7 @@
 <svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pharma Portal">
+  <!-- The Pharma Portal mark: a white plus on the brand-red tile, the vector twin
+       of the generated app/icon.tsx and app/apple-icon.tsx PNGs. -->
   <rect width="180" height="180" rx="40" fill="#c8102e" />
-  <rect x="76" y="40" width="28" height="100" rx="8" fill="#ffffff" />
-  <rect x="40" y="76" width="100" height="28" rx="8" fill="#ffffff" />
+  <rect x="73" y="37" width="34" height="106" rx="4" fill="#ffffff" />
+  <rect x="37" y="73" width="106" height="34" rx="4" fill="#ffffff" />
 </svg>

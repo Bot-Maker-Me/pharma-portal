@@ -1,11 +1,9 @@
 import { ImageResponse } from 'next/og'
 
 /**
- * The iOS home-screen icon.
- *
- * This is also the mark iOS shows on a web push notification from an installed
- * PWA, so it must be a PNG — iOS ignores the SVG. Shape stays inside the safe
- * zone so iOS can apply its own rounded-corner mask.
+ * The iOS home-screen icon, and — because iOS ignores an SVG and an in-page SVG
+ * icon in a notification — the image iOS puts on a web push from an installed PWA.
+ * Same plus sign as the tab icon, sized for the home screen.
  */
 
 export const size = { width: 180, height: 180 }
@@ -21,30 +19,31 @@ export default function AppleIcon() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#0b1220',
+          background: '#c8102e',
+          borderRadius: 40,
         }}
       >
-        <div style={{ position: 'relative', width: 100, height: 100, display: 'flex' }}>
+        <div style={{ position: 'relative', width: 106, height: 106, display: 'flex' }}>
           <div
             style={{
               position: 'absolute',
-              left: 39,
-              top: 0,
-              width: 22,
-              height: 100,
-              borderRadius: 6,
-              background: '#d8232f',
+              left: 0,
+              top: 41,
+              width: 106,
+              height: 24,
+              borderRadius: 4,
+              background: '#ffffff',
             }}
           />
           <div
             style={{
               position: 'absolute',
-              top: 39,
-              left: 0,
-              width: 100,
-              height: 22,
-              borderRadius: 6,
-              background: '#d8232f',
+              left: 41,
+              top: 0,
+              width: 24,
+              height: 106,
+              borderRadius: 4,
+              background: '#ffffff',
             }}
           />
         </div>
