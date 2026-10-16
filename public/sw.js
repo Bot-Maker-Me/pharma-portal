@@ -12,8 +12,12 @@ const DEFAULT_TITLE = 'New message'
 const DEFAULT_BODY = 'You have a new message from the pharmacy'
 /** The screen a notification opens, and the path a focused window is routed to. */
 const CHAT_PATH = '/chat'
-const ICON = '/icon.svg'
-const BADGE = '/icon.svg'
+// The PNG the app generates from app/apple-icon.tsx. Notification icons must be
+// raster on Android and are ignored entirely by iOS (which uses this same
+// home-screen icon), so a PNG keeps the Pharma Portal mark on every platform —
+// an SVG here silently falls back to a generic/blank icon on some of them.
+const ICON = '/apple-icon'
+const BADGE = '/apple-icon'
 /** Message the app listens for when the window cannot be navigated directly. */
 const NAVIGATE_MESSAGE = 'pharma-portal:navigate'
 

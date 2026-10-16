@@ -30,17 +30,44 @@ const plexMono = IBM_Plex_Mono({
   display: 'swap',
 })
 
+// Absolute base for the generated social image, so a shared link carries a full
+// `og:image` URL rather than a relative one a crawler will drop.
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3000')
+
+const title = 'Pharma Portal — pharmacy workspace & Chat with Home'
+const description =
+  'A focused workspace for pharmacy formularies, plus secure real-time messaging between your pharmacy and the nursing homes you serve.'
+
 export const metadata: Metadata = {
-  title: 'Pharma Portal — pharmacy workspace & Chat with Home',
-  description:
-    'A focused workspace for pharmacy formularies, plus secure real-time messaging between your pharmacy and the nursing homes you serve.',
-  // The only icon source is the Pharma Portal mark. The old Next/v0-generated
-  // PNGs (icon-light-32x32, icon-dark-32x32, apple-icon) are deliberately not
-  // referenced — the browser was picking one of those, which is why the tab still
-  // wore the v0 logo.
-  icons: {
-    icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
-    apple: [{ url: '/icon.svg' }],
+  metadataBase: new URL(siteUrl),
+  title,
+  description,
+  // Every icon source is now the Pharma Portal mark. The vector lives at
+  // /icon.svg (used by the manifest, the service worker and the notifier), while
+  // the tab icon and the iOS home-screen/notification icon are the PNGs generated
+  // from app/icon.tsx and app/apple-icon.tsx — file conventions, so Next links
+  // them automatically. The old Next/v0-generated PNGs (icon-light-32x32,
+  // icon-dark-32x32, apple-icon) were removed.
+  //
+  // The link-preview card. `og:image` is the generated app/opengraph-image.tsx;
+  // declaring the card type here also makes X/Twitter use it.
+  openGraph: {
+    type: 'website',
+    siteName: 'Pharma Portal',
+    locale: 'en_US',
+    title,
+    description,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title,
+    description,
   },
   // Makes the portal installable. On iPhone this is what turns "Add to Home
   // Screen" into an app that can receive notifications at all — Safari only

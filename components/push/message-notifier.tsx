@@ -55,8 +55,10 @@ export function MessageNotifier() {
 
           const options: NotificationOptions = {
             body: NOTIFICATION_BODY,
-            icon: '/icon.svg',
-            badge: '/icon.svg',
+            // Same PNG the service worker uses (generated from app/apple-icon.tsx),
+            // so the notification carries the Pharma Portal mark, never a fallback.
+            icon: '/apple-icon',
+            badge: '/apple-icon',
             tag: NOTIFICATION_TAG,
             data: { url: '/chat' },
           }
