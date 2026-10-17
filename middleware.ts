@@ -1,8 +1,10 @@
 import { type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/proxy'
+import { enforceIpGate } from '@/lib/security/ip-gate'
 
 export async function middleware(request: NextRequest) {
-  return updateSession(request)
+  const { response, user } = await updateSession(request)
+  return enforceIpGate(request, response, user)
 }
 
 export const config = {

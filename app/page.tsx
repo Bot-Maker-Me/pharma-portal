@@ -119,6 +119,26 @@ export default function Page() {
       return
     }
 
+    // The organisation IP allowlist is evaluated server-side (ip_guard is
+    // service-role only), and the decision is written to the audit trail. A
+    // refused sign-in is signed out here, before any workspace access.
+    let signInAllowed = true
+    try {
+      const gateResponse = await fetch('/api/auth/ip-check', { method: 'POST' })
+      if (gateResponse.ok) {
+        const gate = (await gateResponse.json()) as { allowed?: boolean }
+        signInAllowed = gate.allowed !== false
+      }
+    } catch {
+      signInAllowed = true
+    }
+
+    if (!signInAllowed) {
+      await supabase.auth.signOut()
+      setAuthError("Access is restricted to your organisation's network. Contact your administrator.")
+      return
+    }
+
     router.push('/workspace')
     router.refresh()
   }
