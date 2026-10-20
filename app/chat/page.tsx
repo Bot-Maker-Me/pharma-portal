@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getSessionTenant, hasFeature } from '@/lib/features/server'
+import { gateFeature } from '@/lib/features/server'
 import { chatWithHomeFeatureKey } from '@/lib/features/registry'
 import { loadTenantIdentity } from '@/lib/tenant/server'
 import { previewTenant } from '@/lib/tenant/preview'
-import { defaultTenantTheme } from '@/lib/tenant/theme'
 import { ChatExperience } from '@/components/chat/chat-experience'
+import { AdminPreviewNotice, FeatureUnavailable } from '@/components/features/feature-gate'
 import type { ChatIdentity } from '@/lib/chat/types'
 
 export const dynamic = 'force-dynamic'
@@ -19,49 +19,60 @@ export const metadata: Metadata = {
 export default async function ChatPage() {
   const configured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
-  let identity: ChatIdentity = {
-    configured,
-    signedIn: false,
-    userId: null,
-    displayName: 'Pharmacy team',
-    // Without credentials the app runs as the preview pharmacy, so the sample
-    // mailbox is clearly labelled and wears that pharmacy's theme.
-    organization: configured ? null : previewTenant.name,
-    theme: configured ? defaultTenantTheme : previewTenant.theme,
-  }
-
-  if (configured) {
-    // Only signed-in pharmacy users may use Chat with Home.
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) redirect('/')
-
-    const [profileResult, context] = await Promise.all([
-      supabase.from('profiles').select('full_name, organization').eq('id', user.id).maybeSingle(),
-      getSessionTenant(),
-    ])
-    const profile = profileResult.data
-
-    // No grant, no chat. A pharmacy that has not been given the feature is sent
-    // back to its workspace instead of being shown a dead end.
-    if (!context || !(await hasFeature(context.tenantId, chatWithHomeFeatureKey))) redirect('/workspace')
-
-    // The pharmacy's branded theme travels with the session, so a pharmacy that
-    // carries one gets it on every chat screen it opens.
-    const theme = (await loadTenantIdentity(context.tenantId)).theme
-
-    identity = {
-      configured,
-      signedIn: true,
-      userId: user.id,
-      // `||` (not `??`) so an empty full_name falls through to the email prefix.
-      displayName: profile?.full_name?.trim() || user.email?.split('@')[0] || 'Pharmacy team',
-      organization: profile?.organization?.trim() || null,
-      theme,
+  // Without credentials the app runs as the preview pharmacy, so the sample
+  // mailbox is clearly labelled and wears that pharmacy's theme.
+  if (!configured) {
+    const identity: ChatIdentity = {
+      configured: false,
+      signedIn: false,
+      userId: null,
+      displayName: 'Pharmacy team',
+      organization: previewTenant.name,
+      theme: previewTenant.theme,
     }
+    return <ChatExperience identity={identity} />
   }
 
-  return <ChatExperience identity={identity} />
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect('/')
+
+  // Chat with Home is a per-pharmacy feature. When it is off the pharmacy gets the
+  // friendly "not available yet" page instead of the content; a platform admin may
+  // still open it, clearly marked as a preview.
+  const gate = await gateFeature(chatWithHomeFeatureKey)
+  if (gate.state === 'no-tenant') redirect('/workspace')
+  if (gate.state === 'off') return <FeatureUnavailable label={gate.feature.name} />
+
+  const [profileResult, tenant] = await Promise.all([
+    supabase.from('profiles').select('full_name, organization').eq('id', gate.tenant.userId).maybeSingle(),
+    loadTenantIdentity(gate.tenant.tenantId),
+  ])
+  const profile = profileResult.data
+
+  const identity: ChatIdentity = {
+    configured: true,
+    signedIn: true,
+    userId: gate.tenant.userId,
+    // `||` (not `??`) so an empty full_name falls through to the email prefix.
+    displayName: profile?.full_name?.trim() || user.email?.split('@')[0] || 'Pharmacy team',
+    organization: profile?.organization?.trim() || null,
+    theme: tenant.theme,
+  }
+
+  return (
+    <>
+      {gate.state === 'admin-preview' && (
+        // Overlaid, not stacked, so the chat keeps the full viewport it expects.
+        <div className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center p-2">
+          <div className="pointer-events-auto w-full max-w-md">
+            <AdminPreviewNotice label="Chat with Home" />
+          </div>
+        </div>
+      )}
+      <ChatExperience identity={identity} />
+    </>
+  )
 }

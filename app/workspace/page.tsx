@@ -3,8 +3,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ShieldCheck, Wrench } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { getSessionTenant, getVisibleTenantFeatures } from '@/lib/features/server'
-import { featuresToClient, getCustomFeatures, getVisibleFeatures } from '@/lib/features/registry'
+import { getSessionTenant, getTenantFeatureKeys } from '@/lib/features/server'
+import { featureRegistry, toClientFeatures } from '@/lib/features/registry'
 import { loadWorkspaceData } from '@/lib/workspace/data'
 import { previewWorkspace } from '@/lib/workspace/preview'
 import { loadTenantIdentity } from '@/lib/tenant/server'
@@ -18,10 +18,10 @@ export const metadata: Metadata = {
   description: 'Your pharmacy workspace.',
 }
 
-// The sample pharmacy models a fully granted workspace, so every screen stays
-// reachable while Supabase is unconfigured. A real pharmacy starts with no
-// grants at all — they are given one at a time in Admin console → Features.
-const previewFeatures = featuresToClient(getVisibleFeatures(getCustomFeatures().map((feature) => feature.key)))
+// The sample pharmacy models a fully released workspace, so every screen stays
+// reachable while Supabase is unconfigured. A real pharmacy starts with nothing
+// switched on — each feature is released one toggle at a time.
+const previewFeatures = toClientFeatures(featureRegistry.map((feature) => feature.key))
 
 export default async function WorkspacePage() {
   // The preview environment can be missing Supabase credentials. Say so plainly
@@ -97,10 +97,10 @@ export default async function WorkspacePage() {
     )
   }
 
-  const [tenant, data, grantedFeatures] = await Promise.all([
+  const [tenant, data, enabledKeys] = await Promise.all([
     loadTenantIdentity(context.tenantId),
     loadWorkspaceData(context.tenantId),
-    getVisibleTenantFeatures(context.tenantId),
+    getTenantFeatureKeys(context.tenantId),
   ])
 
   return (
@@ -110,7 +110,7 @@ export default async function WorkspacePage() {
       userEmail={user.email ?? ''}
       isPlatformAdmin={isPlatformAdmin}
       data={data}
-      features={featuresToClient(grantedFeatures)}
+      features={toClientFeatures(enabledKeys)}
     />
   )
 }

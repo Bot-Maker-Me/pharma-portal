@@ -1,12 +1,9 @@
 import 'server-only'
 
+import { cache } from 'react'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getVisibleFeatures, type FeatureDefinition, type FeatureGrant, type TenantContext } from './registry'
-
-// Mirrors `type: 'base'` in the registry. A feature listed here is part of every
-// pharmacy's workspace; anything else has to be granted in tenant_features.
-const baseFeatureKeys = new Set(['formulary', 'sops', 'opening-closing', 'blister-pack-tracker', 'delivery-slips', 'signing-sheet', 'vaccine-wait-list'])
+import { getFeature, type FeatureDefinition, type FeatureGrant, type TenantContext } from './registry'
 
 export async function getSessionTenant(): Promise<TenantContext | null> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null
@@ -18,28 +15,44 @@ export async function getSessionTenant(): Promise<TenantContext | null> {
   return { userId: user.id, tenantId: membership.tenant_id, role: membership.role }
 }
 
+/**
+ * The feature keys switched on for one pharmacy.
+ *
+ * Memoised per request (so the sidebar, the page body and any guard agree without
+ * re-querying), and FAILS CLOSED: a missing key, a query error or an unconfigured
+ * client all return an empty list, which hides every feature rather than exposing
+ * one that may not be paid for or approved.
+ */
+export const getTenantFeatureKeys = cache(async (tenantId: string): Promise<string[]> => {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return []
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('tenant_features')
+    .select('feature_key')
+    .eq('tenant_id', tenantId)
+    .eq('enabled', true)
+  if (error) return []
+  return ((data ?? []) as { feature_key: string }[]).map((row) => String(row.feature_key))
+})
+
 export async function getTenantEntitlements(tenantId: string): Promise<FeatureGrant[]> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return []
   const supabase = await createClient()
-  const { data } = await supabase.from('tenant_features').select('feature_key, enabled, config, granted_at, notes').eq('tenant_id', tenantId).eq('enabled', true)
+  const { data, error } = await supabase.from('tenant_features').select('feature_key, enabled, config, granted_at, notes').eq('tenant_id', tenantId).eq('enabled', true)
+  if (error) return []
   return (data ?? []) as FeatureGrant[]
 }
 
-export async function hasFeature(tenantId: string, featureKey: string) {
-  if (baseFeatureKeys.has(featureKey)) return true
-  const grants = await getTenantEntitlements(tenantId)
-  return grants.some((grant) => grant.feature_key === featureKey && grant.enabled)
+/** Whether a pharmacy has this feature switched on. Fails closed. */
+export async function hasFeature(tenantId: string, featureKey: string): Promise<boolean> {
+  return (await getTenantFeatureKeys(tenantId)).includes(featureKey)
 }
 
-/**
- * Everything a pharmacy's workspace should show: all base features, plus the
- * custom ones an administrator has granted it. A custom feature that has never
- * been granted simply is not in the list, so nothing renders for it.
- */
-export async function getVisibleTenantFeatures(tenantId: string): Promise<FeatureDefinition[]> {
-  const grants = await getTenantEntitlements(tenantId)
-  return getVisibleFeatures(grants.map((grant) => grant.feature_key))
-}
+export const isPlatformAdmin = cache(async (userId: string): Promise<boolean> => {
+  const supabase = await createClient()
+  const { data } = await supabase.from('platform_admins').select('user_id').eq('user_id', userId).maybeSingle()
+  return Boolean(data)
+})
 
 export async function requireTenant() {
   const context = await getSessionTenant()
@@ -47,18 +60,36 @@ export async function requireTenant() {
   return context
 }
 
-export async function requireFeature(featureKey: string) {
+export async function requirePlatformAdmin() {
   const context = await requireTenant()
-  if (!(await hasFeature(context.tenantId, featureKey))) notFound()
+  if (!(await isPlatformAdmin(context.userId))) notFound()
   return context
 }
 
-export async function requirePlatformAdmin() {
-  const context = await requireTenant()
-  const supabase = await createClient()
-  const { data } = await supabase.from('platform_admins').select('user_id').eq('user_id', context.userId).maybeSingle()
-  if (!data) notFound()
-  return context
+/**
+ * How one feature should render for the current user.
+ *
+ *  - `no-tenant`     the visitor has no pharmacy workspace
+ *  - `on`            switched on for their pharmacy
+ *  - `admin-preview` off for their pharmacy, but they are a platform admin — they
+ *                    may open it anyway, clearly labelled
+ *  - `off`           off for their pharmacy and not an admin → the friendly
+ *                    "not available yet" page
+ */
+export type FeatureGate =
+  | { state: 'no-tenant' }
+  | { state: 'on'; tenant: TenantContext; feature: FeatureDefinition }
+  | { state: 'admin-preview'; tenant: TenantContext; feature: FeatureDefinition }
+  | { state: 'off'; tenant: TenantContext; feature: FeatureDefinition }
+
+export async function gateFeature(featureKey: string): Promise<FeatureGate> {
+  const feature = getFeature(featureKey)
+  if (!feature) notFound()
+  const tenant = await getSessionTenant()
+  if (!tenant) return { state: 'no-tenant' }
+  if (await hasFeature(tenant.tenantId, feature.key)) return { state: 'on', tenant, feature }
+  if (await isPlatformAdmin(tenant.userId)) return { state: 'admin-preview', tenant, feature }
+  return { state: 'off', tenant, feature }
 }
 
 export type PlatformAdminGate =

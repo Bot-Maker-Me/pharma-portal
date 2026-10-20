@@ -1,67 +1,138 @@
 import type { ComponentType } from 'react'
+import type { WorkspaceSectionKey } from '@/lib/workspace/sections'
 
 /**
- * The messaging feature's key. Named here rather than repeated as a literal,
- * because the route guard (`app/chat/page.tsx`) and the workspace rail both have
- * to ask whether this one pharmacy has been granted it.
+ * The feature catalog — the single source of truth for what a pharmacy can open.
+ *
+ * Every entry is a per-pharmacy switch. There is no "in every workspace" default
+ * any more: a feature is OFF unless a row in public.tenant_features says it is
+ * enabled, so the release of a module is one deliberate toggle at a time.
+ *
+ * The catalog mirrors into public.features (key/name/description) whenever an
+ * administrator changes a switch — see setTenantFeature in lib/admin/data.ts.
  */
 export const chatWithHomeFeatureKey = 'chat-with-home'
-
-// Base features are part of every pharmacy's workspace. Custom features stay
-// switched off until a platform administrator grants them to a specific
-// pharmacy from the admin console — see public.tenant_features.
-export type FeatureType = 'base' | 'custom'
 
 export type FeatureDefinition = {
   key: string
   name: string
   description: string
-  type: FeatureType
-  sidebar: { label: string; icon: string; route: string }
-  route: string
+  /** Sidebar label and icon name (resolved to a lucide icon in the workspace). */
+  sidebar: { label: string; icon: string }
+  /**
+   * Content-section modules read public.tenant_content for this section. The
+   * key and the section are the same word, which is what lets the data-table
+   * RLS gate call feature_enabled(section) directly.
+   */
+  section?: WorkspaceSectionKey
+  /** Standalone page modules, reachable by URL and gated on the same key. */
+  route?: string
   load?: () => Promise<{ default: ComponentType }>
-  defaults?: Record<string, unknown>
 }
 
 export const featureRegistry: FeatureDefinition[] = [
-  { key: 'formulary', name: 'Formulary', description: 'Preferred medicines and substitution rules.', type: 'base', sidebar: { label: 'Formulary', icon: 'table', route: '/workspace/formulary' }, route: '/workspace/formulary' },
-  { key: 'sops', name: 'SOPs & Policies', description: 'Searchable procedures and policy versions.', type: 'base', sidebar: { label: 'SOPs & Policies', icon: 'document', route: '/workspace/sops' }, route: '/workspace/sops' },
-  { key: 'opening-closing', name: 'Opening / Closing', description: 'Daily opening and closing checklists.', type: 'base', sidebar: { label: 'Opening / Closing', icon: 'check', route: '/workspace/procedures' }, route: '/workspace/procedures' },
-  { key: 'blister-pack-tracker', name: 'Blister Pack Tracker', description: 'Track blister pack preparation.', type: 'base', sidebar: { label: 'Blister Pack Tracker', icon: 'box', route: '/workspace/blister-packs' }, route: '/workspace/blister-packs' },
-  { key: 'delivery-slips', name: 'Delivery Slips', description: 'Prepare and manage delivery slips.', type: 'base', sidebar: { label: 'Delivery Slips', icon: 'truck', route: '/workspace/delivery-slips' }, route: '/workspace/delivery-slips' },
-  { key: 'signing-sheet', name: 'Signing Sheet', description: 'Daily sign-off records.', type: 'base', sidebar: { label: 'Signing Sheet', icon: 'pen', route: '/workspace/signing-sheet' }, route: '/workspace/signing-sheet' },
-  { key: 'vaccine-wait-list', name: 'Vaccine Wait List', description: 'Manage vaccine requests and wait lists.', type: 'base', sidebar: { label: 'Vaccine Wait List', icon: 'syringe', route: '/workspace/vaccine-wait-list' }, route: '/workspace/vaccine-wait-list' },
-  { key: chatWithHomeFeatureKey, name: 'Chat with Home', description: 'Secure messaging between the pharmacy and the nursing homes it serves. Granted per pharmacy by an administrator.', type: 'custom', sidebar: { label: 'Chat with Home', icon: 'message', route: '/chat' }, route: '/chat' },
+  {
+    key: 'formulary',
+    name: 'Formulary',
+    description: 'Preferred medicines and substitution rules.',
+    sidebar: { label: 'Formulary', icon: 'table' },
+  },
+  {
+    key: 'opening',
+    name: 'Opening Procedure',
+    description: 'Steps to complete when opening the pharmacy.',
+    sidebar: { label: 'Opening Procedure', icon: 'sunrise' },
+    section: 'opening',
+  },
+  {
+    key: 'closing',
+    name: 'Closing Procedure',
+    description: 'Steps to complete before locking up.',
+    sidebar: { label: 'Closing Procedure', icon: 'sunset' },
+    section: 'closing',
+  },
+  {
+    key: 'staff',
+    name: 'Staff Schedule',
+    description: 'Team members and their shifts.',
+    sidebar: { label: 'Staff Schedule', icon: 'users' },
+    section: 'staff',
+  },
+  {
+    key: 'emergency',
+    name: 'Emergency Contact List',
+    description: 'After-hours, prescriber and manager contacts.',
+    sidebar: { label: 'Emergency Contact List', icon: 'phone' },
+    section: 'emergency',
+  },
+  {
+    key: 'standards',
+    name: 'Standards of Procedure',
+    description: 'Standard operating procedures and policies.',
+    sidebar: { label: 'Standards of Procedure', icon: 'document' },
+    section: 'standards',
+  },
+  {
+    key: 'support',
+    name: 'Prescription Data Entry Support Resources',
+    description: 'Prescription data-entry reference material.',
+    sidebar: { label: 'Prescription Data Entry Support Resources', icon: 'lifebuoy' },
+    section: 'support',
+  },
+  {
+    key: 'forms',
+    name: 'Third Party Forms',
+    description: 'Claim forms, links and downloads.',
+    sidebar: { label: 'Third Party Forms', icon: 'clipboard' },
+    section: 'forms',
+  },
+  {
+    key: chatWithHomeFeatureKey,
+    name: 'Chat with Home',
+    description: 'Secure messaging between the pharmacy and the nursing homes it serves.',
+    sidebar: { label: 'Chat with Home', icon: 'message' },
+    route: '/chat',
+  },
 ]
 
-export function getFeature(featureKey: string) { return featureRegistry.find((feature) => feature.key === featureKey) }
-export function getBaseFeatures() { return featureRegistry.filter((feature) => feature.type === 'base') }
-export function getCustomFeatures() { return featureRegistry.filter((feature) => feature.type === 'custom') }
+/** What the workspace rail receives: the catalog, each with its on/off state. */
+export type ClientFeature = {
+  key: string
+  name: string
+  description: string
+  sidebar: { label: string; icon: string }
+  section?: WorkspaceSectionKey
+  route?: string
+  enabled: boolean
+}
 
-export function getVisibleFeatures(enabledKeys: Iterable<string>) {
+export function getFeature(featureKey: string): FeatureDefinition | undefined {
+  return featureRegistry.find((feature) => feature.key === featureKey)
+}
+
+/** The whole catalog, each tagged with whether this pharmacy has it switched on. */
+export function toClientFeatures(enabledKeys: Iterable<string>): ClientFeature[] {
   const enabled = new Set(enabledKeys)
-  return featureRegistry.filter((feature) => feature.type === 'base' || enabled.has(feature.key))
+  return featureRegistry.map((feature) => ({
+    key: feature.key,
+    name: feature.name,
+    description: feature.description,
+    sidebar: feature.sidebar,
+    section: feature.section,
+    route: feature.route,
+    enabled: enabled.has(feature.key),
+  }))
 }
-
-export function registerCustomFeature(feature: FeatureDefinition) {
-  if (feature.type !== 'custom') throw new Error('Only custom features can be registered dynamically.')
-  if (featureRegistry.some((item) => item.key === feature.key)) throw new Error(`Feature already registered: ${feature.key}`)
-  featureRegistry.push(feature)
-}
-
-export function hasRegisteredFeature(featureKey: string) { return Boolean(getFeature(featureKey)) }
-
-export type FeatureGrant = { feature_key: string; enabled: boolean; config: Record<string, unknown>; granted_at: string; notes: string | null }
-export type TenantContext = { userId: string; tenantId: string; role: 'owner' | 'admin' | 'staff' }
-
-export const featureKeys = featureRegistry.map((feature) => feature.key)
-
-export function featureToClient(feature: FeatureDefinition) {
-  return { key: feature.key, name: feature.name, description: feature.description, type: feature.type, sidebar: feature.sidebar, route: feature.route }
-}
-
-export function featuresToClient(features: FeatureDefinition[]) { return features.map(featureToClient) }
 
 export function parseConfig(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
 }
+
+export type FeatureGrant = {
+  feature_key: string
+  enabled: boolean
+  config: Record<string, unknown>
+  granted_at: string
+  notes: string | null
+}
+export type TenantContext = { userId: string; tenantId: string; role: 'owner' | 'admin' | 'staff' }

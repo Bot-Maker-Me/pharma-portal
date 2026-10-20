@@ -258,25 +258,34 @@ export async function deleteFormularyItem(id: string): Promise<void> {
   if (error) fail(error)
 }
 
-/** The custom feature keys a pharmacy currently has switched on. */
+/** The feature keys a pharmacy currently has switched on. */
 export async function loadTenantFeatureKeys(tenantId: string): Promise<string[]> {
   const { data, error } = await db()
     .from('tenant_features')
-    .select('feature_key, enabled')
+    .select('feature_key')
     .eq('tenant_id', tenantId)
     .eq('enabled', true)
   if (error) fail(error)
   return ((data ?? []) as { feature_key: string }[]).map((row) => String(row.feature_key))
 }
 
+/** Every enabled (pharmacy, feature) pair — the by-feature view of the matrix. */
+export async function loadAllTenantFeatures(): Promise<{ tenantId: string; featureKey: string }[]> {
+  const { data, error } = await db().from('tenant_features').select('tenant_id, feature_key').eq('enabled', true)
+  if (error) fail(error)
+  return ((data ?? []) as { tenant_id: string; feature_key: string }[]).map((row) => ({
+    tenantId: String(row.tenant_id),
+    featureKey: String(row.feature_key),
+  }))
+}
+
 /**
- * Grants or revokes one custom feature for one pharmacy, and records the change
- * in the audit log. This is the only way a pharmacy gets a custom feature: there
- * is no self-service path, and no default.
+ * Switches one feature on or off for one pharmacy, writing the catalog row it
+ * depends on and the audit entry that records who changed what.
  *
  * `tenant_features.feature_key` is a foreign key onto `features.key`, so the
- * catalog row is written first — that way granting still works for a feature the
- * seed migration never listed.
+ * catalog row is written first — that way a toggle still works for a feature the
+ * seed migration never listed. A missing row means OFF, so "off" is a delete.
  */
 export async function setTenantFeature(input: {
   tenantId: string
@@ -284,7 +293,7 @@ export async function setTenantFeature(input: {
   enabled: boolean
 }): Promise<void> {
   const feature = getFeature(input.featureKey)
-  if (!feature || feature.type !== 'custom') throw new Error('Only custom features can be granted.')
+  if (!feature) throw new Error(`Unknown feature: ${input.featureKey}`)
 
   const client = db()
   const {
@@ -295,10 +304,19 @@ export async function setTenantFeature(input: {
   const { error: catalogError } = await client
     .from('features')
     .upsert(
-      { key: feature.key, name: feature.name, description: feature.description, type: feature.type, is_active: true },
+      { key: feature.key, name: feature.name, description: feature.description, type: 'custom', is_active: true },
       { onConflict: 'key' },
     )
   if (catalogError) fail(catalogError)
+
+  // The current value, so the audit trail carries the real before-state.
+  const { data: existing } = await client
+    .from('tenant_features')
+    .select('enabled')
+    .eq('tenant_id', input.tenantId)
+    .eq('feature_key', feature.key)
+    .maybeSingle()
+  const before = Boolean(existing?.enabled)
 
   if (input.enabled) {
     const { error } = await client.from('tenant_features').upsert(
@@ -326,7 +344,22 @@ export async function setTenantFeature(input: {
     tenant_id: input.tenantId,
     feature_key: feature.key,
     action: input.enabled ? 'grant' : 'revoke',
+    before_state: { enabled: before },
     after_state: { enabled: input.enabled },
   })
   if (auditError) fail(auditError)
+}
+
+/** Switches one feature on or off for every pharmacy. One audited write each. */
+export async function setFeatureForAll(input: {
+  featureKey: string
+  enabled: boolean
+  tenantIds: string[]
+}): Promise<number> {
+  let changed = 0
+  for (const tenantId of input.tenantIds) {
+    await setTenantFeature({ tenantId, featureKey: input.featureKey, enabled: input.enabled })
+    changed += 1
+  }
+  return changed
 }

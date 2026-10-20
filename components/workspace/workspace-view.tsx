@@ -26,29 +26,21 @@ import { cn } from '@/lib/utils'
 import { createClient as createSupabaseClient } from '@/lib/supabase/client'
 import { NotificationSettings } from '@/components/push/notification-settings'
 import { ChatExperience } from '@/components/chat/chat-experience'
-import { chatWithHomeFeatureKey } from '@/lib/features/registry'
-import { workspaceSections } from '@/lib/workspace/sections'
+import { chatWithHomeFeatureKey, type ClientFeature } from '@/lib/features/registry'
 import { tenantThemeClass, type TenantTheme } from '@/lib/tenant/theme'
 import type { ChatIdentity } from '@/lib/chat/types'
 import type { WorkspaceData } from '@/lib/workspace/types'
 
-// One icon per content section, so the rail reads at a glance.
-const sectionIcons: Record<string, LucideIcon> = {
-  opening: Sunrise,
-  closing: Sunset,
-  staff: Users,
-  emergency: PhoneCall,
-  standards: FileText,
-  support: LifeBuoy,
-  forms: ClipboardList,
-}
-
-// The `sidebar.icon` names the feature registry uses, resolved to real icons.
+// One icon per feature, keyed by the `sidebar.icon` name in the registry.
 const featureIcons: Record<string, LucideIcon> = {
   table: Table2,
   document: FileText,
-  check: ClipboardList,
-  box: Inbox,
+  sunrise: Sunrise,
+  sunset: Sunset,
+  users: Users,
+  phone: PhoneCall,
+  lifebuoy: LifeBuoy,
+  clipboard: ClipboardList,
   message: MessagesSquare,
 }
 
@@ -59,14 +51,6 @@ function initials(value: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-/** One entry of the rail: a feature this pharmacy is allowed to open. */
-export type WorkspaceFeature = {
-  key: string
-  name: string
-  type: string
-  sidebar: { label: string; icon: string; route: string }
-}
-
 type WorkspaceViewProps = {
   tenantName: string
   /** The pharmacy's branded theme (`tenants.theme`). */
@@ -75,11 +59,11 @@ type WorkspaceViewProps = {
   isPlatformAdmin: boolean
   data: WorkspaceData
   /**
-   * Everything this pharmacy may open. Custom features are only in here once an
-   * administrator has granted them, so the rail is the visible half of that
-   * gate — the routes check it again on the server.
+   * The whole feature catalog, each tagged with whether this pharmacy has it on.
+   * Only enabled features reach the rail — a platform admin additionally sees the
+   * disabled ones, labelled as a preview.
    */
-  features: WorkspaceFeature[]
+  features: ClientFeature[]
   /** True when this is the sample workspace shown before Supabase is connected. */
   preview?: boolean
 }
@@ -94,7 +78,7 @@ export function WorkspaceView({
   preview,
 }: WorkspaceViewProps) {
   const router = useRouter()
-  const [section, setSection] = useState<string>('formulary')
+  const [section, setSection] = useState<string>('')
   const [query, setQuery] = useState('')
 
   const formulary = useMemo(() => {
@@ -109,13 +93,19 @@ export function WorkspaceView({
     )
   }, [data.formulary, query])
 
-  // Extras are the gated half of the rail: a pharmacy only sees one here once an
-  // administrator has granted it.
-  const customFeatures = features.filter((feature) => feature.type === 'custom')
-  const chatFeature = customFeatures.find((feature) => feature.key === chatWithHomeFeatureKey) ?? null
+  // A platform admin may open anything; everyone else sees only what is switched
+  // on for their pharmacy. A missing feature simply is not in the rail.
+  const shown = features.filter((feature) => feature.enabled || isPlatformAdmin)
+  const shownKeys = new Set(shown.map((feature) => feature.key))
+  const defaultKey = shownKeys.has('formulary') ? 'formulary' : (shown[0]?.key ?? 'account')
+  const activeKey = section === 'account' || shownKeys.has(section) ? section : defaultKey
+  const activeFeature = features.find((feature) => feature.key === activeKey) ?? null
+  const adminPreviewing = Boolean(activeFeature && !activeFeature.enabled && isPlatformAdmin)
 
-  const sectionContent = data.content.filter((item) => item.section === section)
-  const activeSection = workspaceSections.find((item) => item.key === section)
+  const chatVisible = shownKeys.has(chatWithHomeFeatureKey)
+  const countFor = (feature: ClientFeature) =>
+    feature.section ? data.content.filter((row) => row.section === feature.section).length : 0
+
   const displayName = userEmail ? userEmail.split('@')[0].replace(/[._-]+/g, ' ') : 'signed in'
 
   // Chat with Home runs *inside* the workspace rather than as a separate page, so
@@ -143,7 +133,7 @@ export function WorkspaceView({
         'ws-shell ws-frame bg-paper',
         // Locking the frame to one viewport while the chat is open is what makes
         // the message list scroll instead of the whole page.
-        section === 'chat' && 'ws-frame--chat',
+        activeKey === chatWithHomeFeatureKey && 'ws-frame--chat',
         tenantThemeClass(theme),
       )}
     >
@@ -156,11 +146,11 @@ export function WorkspaceView({
             <strong>Pharma</strong>
             <span>Portal</span>
           </div>
-          {chatFeature && (
+          {chatVisible && (
             <button
               type="button"
               className="ws-bell"
-              onClick={() => setSection('chat')}
+              onClick={() => setSection(chatWithHomeFeatureKey)}
               aria-label="Messages and notifications"
             >
               <Bell className="ws-nav-icon" aria-hidden="true" />
@@ -172,58 +162,29 @@ export function WorkspaceView({
         <div className="ws-tenant-card">{tenantName}</div>
 
         <nav className="ws-sidebar-nav" aria-label="Workspace sections">
-          <button
-            type="button"
-            onClick={() => setSection('formulary')}
-            aria-current={section === 'formulary' ? 'true' : undefined}
-            className={cn('ws-nav-row', section === 'formulary' && 'is-active')}
-          >
-            <Table2 className="ws-nav-icon" aria-hidden="true" />
-            <span className="truncate">Formulary</span>
-            <span className="ws-nav-count">{data.formulary.length}</span>
-          </button>
-
-          {workspaceSections.map((item) => {
-            const Icon = sectionIcons[item.key] ?? FileText
-            const count = data.content.filter((row) => row.section === item.key).length
+          {shown.map((feature) => {
+            const Icon = featureIcons[feature.sidebar.icon] ?? FileText
             return (
               <button
-                key={item.key}
+                key={feature.key}
                 type="button"
-                onClick={() => setSection(item.key)}
-                aria-current={section === item.key ? 'true' : undefined}
-                className={cn('ws-nav-row', section === item.key && 'is-active')}
+                onClick={() => setSection(feature.key)}
+                aria-current={activeKey === feature.key ? 'true' : undefined}
+                className={cn('ws-nav-row', activeKey === feature.key && 'is-active')}
               >
                 <Icon className="ws-nav-icon" aria-hidden="true" />
-                <span className="truncate">{item.label}</span>
-                <span className="ws-nav-count">{count}</span>
-              </button>
-            )
-          })}
-
-          {customFeatures.map((feature) => {
-            const Icon = featureIcons[feature.sidebar.icon] ?? MessagesSquare
-            // Chat with Home opens as a panel of this workspace (like the nursing
-            // home app), not as a separate /chat page in its own tab.
-            if (feature.key === chatWithHomeFeatureKey) {
-              return (
-                <button
-                  key={feature.key}
-                  type="button"
-                  onClick={() => setSection('chat')}
-                  aria-current={section === 'chat' ? 'true' : undefined}
-                  className={cn('ws-nav-row', section === 'chat' && 'is-active')}
-                >
-                  <Icon className="ws-nav-icon" aria-hidden="true" />
-                  <span className="truncate">{feature.sidebar.label}</span>
-                </button>
-              )
-            }
-            return (
-              <Link key={feature.key} className="ws-nav-row" href={feature.sidebar.route}>
-                <Icon className="ws-nav-icon" aria-hidden="true" />
                 <span className="truncate">{feature.sidebar.label}</span>
-              </Link>
+                {!feature.enabled && (
+                  <span className="ml-auto shrink-0 rounded-full bg-sage/25 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-ink-soft">
+                    Preview
+                  </span>
+                )}
+                {feature.key === 'formulary' ? (
+                  <span className="ws-nav-count">{data.formulary.length}</span>
+                ) : feature.section ? (
+                  <span className="ws-nav-count">{countFor(feature)}</span>
+                ) : null}
+              </button>
             )
           })}
 
@@ -237,8 +198,8 @@ export function WorkspaceView({
           <button
             type="button"
             onClick={() => setSection('account')}
-            aria-current={section === 'account' ? 'true' : undefined}
-            className={cn('ws-nav-row', section === 'account' && 'is-active')}
+            aria-current={activeKey === 'account' ? 'true' : undefined}
+            className={cn('ws-nav-row', activeKey === 'account' && 'is-active')}
           >
             <UserRound className="ws-nav-icon" aria-hidden="true" />
             <span className="truncate">Account</span>
@@ -259,8 +220,8 @@ export function WorkspaceView({
         </div>
       </aside>
 
-      <main className={cn('ws-main', section === 'chat' && 'ws-chat-main')}>
-        {preview && section !== 'chat' && (
+      <main className={cn('ws-main', activeKey === chatWithHomeFeatureKey && 'ws-chat-main')}>
+        {preview && activeKey !== chatWithHomeFeatureKey && (
           <div className="mb-5 flex items-start gap-2 border border-line bg-sage/10 p-3 text-xs text-ink-soft">
             <Info className="mt-0.5 size-3.5 shrink-0 text-evergreen" aria-hidden="true" />
             <p>
@@ -273,7 +234,17 @@ export function WorkspaceView({
           </div>
         )}
 
-        {section === 'formulary' && (
+        {adminPreviewing && activeFeature && (
+          <div className="mb-5 flex items-center gap-2 border border-line bg-sage/10 px-3 py-2 text-xs text-ink-soft">
+            <ShieldCheck className="size-3.5 shrink-0 text-evergreen" aria-hidden="true" />
+            <p>
+              <strong className="font-semibold text-ink">Admin preview.</strong> {activeFeature.name} is off for this
+              pharmacy. Only platform admins can see this.
+            </p>
+          </div>
+        )}
+
+        {activeKey === 'formulary' && (
           <>
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="ws-title">Formulary</h1>
@@ -328,7 +299,7 @@ export function WorkspaceView({
           </>
         )}
 
-        {section === 'account' && (
+        {activeKey === 'account' && (
           <>
             <h1 className="ws-title">Account</h1>
             <p className="ws-subtitle">The team member signed in and the workspace they are attached to.</p>
@@ -358,28 +329,30 @@ export function WorkspaceView({
           </>
         )}
 
-        {section === 'chat' && chatFeature && (
-          <ChatExperience identity={chatIdentity} embedded onExit={() => setSection('formulary')} />
+        {activeKey === chatWithHomeFeatureKey && chatVisible && (
+          <ChatExperience identity={chatIdentity} embedded onExit={() => setSection(defaultKey)} />
         )}
 
-        {section !== 'formulary' && section !== 'account' && section !== 'chat' && (
+        {activeKey !== 'formulary' && activeKey !== 'account' && activeKey !== chatWithHomeFeatureKey && activeFeature && (
           <>
-            <h1 className="ws-title">{activeSection?.label ?? section}</h1>
-            {activeSection && <p className="ws-subtitle">{activeSection.hint}</p>}
+            <h1 className="ws-title">{activeFeature.name}</h1>
+            <p className="ws-subtitle">{activeFeature.description}</p>
 
-            {sectionContent.length === 0 ? (
+            {countFor(activeFeature) === 0 ? (
               <EmptySection
-                title={`Nothing in ${activeSection?.label ?? 'this section'} yet`}
+                title={`Nothing in ${activeFeature.name} yet`}
                 hint="Add items in the Admin console → Workspace content."
               />
             ) : (
               <ul className="mt-5 flex flex-col gap-2">
-                {sectionContent.map((item) => (
-                  <li key={item.id} className="border border-line bg-surface p-4">
-                    <p className="text-sm font-semibold text-ink">{item.title}</p>
-                    {item.body && <p className="mt-1 text-xs leading-relaxed text-ink-soft">{item.body}</p>}
-                  </li>
-                ))}
+                {data.content
+                  .filter((item) => item.section === activeFeature.section)
+                  .map((item) => (
+                    <li key={item.id} className="border border-line bg-surface p-4">
+                      <p className="text-sm font-semibold text-ink">{item.title}</p>
+                      {item.body && <p className="mt-1 text-xs leading-relaxed text-ink-soft">{item.body}</p>}
+                    </li>
+                  ))}
               </ul>
             )}
           </>

@@ -10,7 +10,7 @@ import { workspaceSections, type WorkspaceSectionKey } from '@/lib/workspace/sec
 import { UsersPanel } from '@/components/admin/users-panel'
 import { HomesPanel } from '@/components/admin/homes-panel'
 import { TenantsPanel } from '@/components/admin/tenants-panel'
-import { FeaturesPanel } from '@/components/admin/features-panel'
+import { FeatureAccessPanel } from '@/components/admin/feature-access-panel'
 import { FormularyPanel, SectionPanel } from '@/components/admin/content-panel'
 
 type View =
@@ -28,8 +28,8 @@ const headings: Record<View['kind'], { title: string; subtitle: string }> = {
   },
   section: { title: '', subtitle: '' },
   features: {
-    title: 'Features',
-    subtitle: 'Extras granted per pharmacy. A pharmacy only gets one when you grant it here.',
+    title: 'Feature access',
+    subtitle: 'Release features one pharmacy at a time. Everything starts off.',
   },
   users: {
     title: 'Users & access',
@@ -161,7 +161,7 @@ export function AdminConsole({ adminEmail }: { adminEmail: string }) {
             className={cn('admin-rail-item', view.kind === 'features' && 'is-on')}
             onClick={() => setView({ kind: 'features' })}
           >
-            Features
+            Feature access
           </button>
           <button
             type="button"
@@ -269,7 +269,7 @@ export function AdminConsole({ adminEmail }: { adminEmail: string }) {
           )}
 
           {status === 'ready' && view.kind === 'features' && (
-            <FeaturesPanel tenants={tenants} tenantId={tenantId} onChanged={reload} />
+            <FeatureAccessPanel tenants={tenants} tenantId={tenantId} onChanged={reload} />
           )}
           {status === 'ready' && view.kind === 'formulary' && tenantId && <FormularyPanel tenantId={tenantId} />}
           {status === 'ready' && view.kind === 'section' && tenantId && (

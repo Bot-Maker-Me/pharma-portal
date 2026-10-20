@@ -1,5 +1,5 @@
 import { requirePlatformAdmin, getTenantEntitlements } from '@/lib/features/server'
-import { getBaseFeatures, getCustomFeatures } from '@/lib/features/registry'
+import { featureRegistry } from '@/lib/features/registry'
 
 export default async function PlatformPage() {
   const isConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
@@ -8,8 +8,6 @@ export default async function PlatformPage() {
   }
   const context = await requirePlatformAdmin()
   const entitlements = await getTenantEntitlements(context.tenantId)
-  const baseFeatures = getBaseFeatures()
-  const customFeatures = getCustomFeatures()
 
   return (
     <main className="platform-shell">
@@ -18,10 +16,10 @@ export default async function PlatformPage() {
         <span className="today-badge">Platform admin</span>
       </header>
       <section className="platform-grid">
-        <article className="module-panel"><span className="panel-kicker">CURRENT TENANT</span><h2>{context.tenantId}</h2><p>{entitlements.length} enabled custom entitlements.</p></article>
+        <article className="module-panel"><span className="panel-kicker">CURRENT TENANT</span><h2>{context.tenantId}</h2><p>{entitlements.length} features enabled for this pharmacy.</p></article>
         <article className="module-panel"><span className="panel-kicker">TENANTS</span><h2>Tenant directory</h2><p>Tenant membership and plan information belongs here once the migration is applied.</p><button className="ghost-button">Manage tenants</button></article>
       </section>
-      <section className="platform-section"><div className="module-heading"><div><span className="panel-kicker">FEATURE CATALOG</span><h2>Base and custom features</h2></div><button className="dark-button">+ Add feature</button></div><div className="feature-catalog">{baseFeatures.map((feature) => <article className="catalog-row" key={feature.key}><div><strong>{feature.name}</strong><p>{feature.description}</p></div><span className="current-badge">BASE · ACTIVE</span></article>)}{customFeatures.map((feature) => <article className="catalog-row" key={feature.key}><div><strong>{feature.name}</strong><p>{feature.description}</p></div><span className="ghost-badge">CUSTOM</span></article>)}</div></section>
+      <section className="platform-section"><div className="module-heading"><div><span className="panel-kicker">FEATURE CATALOG</span><h2>Available features</h2></div></div><div className="feature-catalog">{featureRegistry.map((feature) => <article className="catalog-row" key={feature.key}><div><strong>{feature.name}</strong><p>{feature.description}</p></div><span className="ghost-badge">OFF BY DEFAULT</span></article>)}</div></section>
       <section className="platform-section"><div className="module-heading"><div><span className="panel-kicker">AUDIT TRAIL</span><h2>Recent entitlement events</h2><p>Grant, revoke, config-change, and tenant-preview events are recorded server-side.</p></div><button className="ghost-button">View all audit events</button></div></section>
     </main>
   )
