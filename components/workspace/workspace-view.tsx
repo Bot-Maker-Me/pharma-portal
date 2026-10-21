@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -26,7 +26,14 @@ import { cn } from '@/lib/utils'
 import { createClient as createSupabaseClient } from '@/lib/supabase/client'
 import { NotificationSettings } from '@/components/push/notification-settings'
 import { ChatExperience } from '@/components/chat/chat-experience'
-import { chatWithHomeFeatureKey, type ClientFeature } from '@/lib/features/registry'
+import { TeamChat } from '@/components/team/team-chat'
+import { EmployeeRequests } from '@/components/requests/employee-requests'
+import {
+  chatWithHomeFeatureKey,
+  employeeRequestsFeatureKey,
+  teamChatFeatureKey,
+  type ClientFeature,
+} from '@/lib/features/registry'
 import { tenantThemeClass, type TenantTheme } from '@/lib/tenant/theme'
 import type { ChatIdentity } from '@/lib/chat/types'
 import type { WorkspaceData } from '@/lib/workspace/types'
@@ -42,7 +49,12 @@ const featureIcons: Record<string, LucideIcon> = {
   lifebuoy: LifeBuoy,
   clipboard: ClipboardList,
   message: MessagesSquare,
+  chat: MessagesSquare,
+  inbox: Inbox,
 }
+
+/** The feature keys whose page owns the whole main column (like Chat with Home). */
+const fullPaneFeatureKeys = new Set([chatWithHomeFeatureKey, teamChatFeatureKey, employeeRequestsFeatureKey])
 
 function initials(value: string): string {
   const parts = value.replace(/[^a-zA-Z0-9 ]/g, ' ').split(/\s+/).filter(Boolean)
@@ -66,6 +78,11 @@ type WorkspaceViewProps = {
   features: ClientFeature[]
   /** True when this is the sample workspace shown before Supabase is connected. */
   preview?: boolean
+  /**
+   * Unread totals for the messaging features, shown as badges on their rail items.
+   * They arrive precomputed from the server and are kept live by the open pane.
+   */
+  unread?: { teamChat: number; employeeRequests: number }
 }
 
 export function WorkspaceView({
@@ -76,10 +93,30 @@ export function WorkspaceView({
   data,
   features,
   preview,
+  unread: unreadProp,
 }: WorkspaceViewProps) {
   const router = useRouter()
   const [section, setSection] = useState<string>('')
   const [query, setQuery] = useState('')
+  const [unread, setUnread] = useState(unreadProp ?? { teamChat: 0, employeeRequests: 0 })
+
+  // Keep the badges in step with the server-rendered totals, then let the open
+  // pane report changes as messages arrive.
+  const teamUnread = unreadProp?.teamChat
+  const requestsUnread = unreadProp?.employeeRequests
+  useEffect(() => {
+    if (teamUnread === undefined && requestsUnread === undefined) return
+    setUnread({ teamChat: teamUnread ?? 0, employeeRequests: requestsUnread ?? 0 })
+  }, [teamUnread, requestsUnread])
+
+  const onTeamUnread = useCallback((count: number) => {
+    setUnread((current) => (current.teamChat === count ? current : { ...current, teamChat: count }))
+  }, [])
+  const onRequestsUnread = useCallback((count: number) => {
+    setUnread((current) =>
+      current.employeeRequests === count ? current : { ...current, employeeRequests: count },
+    )
+  }, [])
 
   const formulary = useMemo(() => {
     const term = query.trim().toLowerCase()
@@ -102,7 +139,21 @@ export function WorkspaceView({
   const activeFeature = features.find((feature) => feature.key === activeKey) ?? null
   const adminPreviewing = Boolean(activeFeature && !activeFeature.enabled && isPlatformAdmin)
 
+  // Chat with Home, Team Chat and Employee Requests each own the whole main column.
+  const fullPane = fullPaneFeatureKeys.has(activeKey)
+  // The messaging panes show their own "Admin preview" marker, so the workspace
+  // does not draw a second one above them.
+  const inlinePreview = Boolean(adminPreviewing && activeFeature && !fullPaneFeatureKeys.has(activeFeature.key))
+
   const chatVisible = shownKeys.has(chatWithHomeFeatureKey)
+  const teamChatVisible = shownKeys.has(teamChatFeatureKey)
+  const requestsVisible = shownKeys.has(employeeRequestsFeatureKey)
+  const unreadFor = (featureKey: string) =>
+    featureKey === teamChatFeatureKey
+      ? unread.teamChat
+      : featureKey === employeeRequestsFeatureKey
+        ? unread.employeeRequests
+        : 0
   const countFor = (feature: ClientFeature) =>
     feature.section ? data.content.filter((row) => row.section === feature.section).length : 0
 
@@ -131,9 +182,9 @@ export function WorkspaceView({
     <div
       className={cn(
         'ws-shell ws-frame bg-paper',
-        // Locking the frame to one viewport while the chat is open is what makes
-        // the message list scroll instead of the whole page.
-        activeKey === chatWithHomeFeatureKey && 'ws-frame--chat',
+        // Locking the frame to one viewport while a messaging pane is open is what
+        // makes the message list scroll instead of the whole page.
+        fullPane && 'ws-frame--chat',
         tenantThemeClass(theme),
       )}
     >
@@ -181,6 +232,17 @@ export function WorkspaceView({
                 )}
                 {feature.key === 'formulary' ? (
                   <span className="ws-nav-count">{data.formulary.length}</span>
+                ) : feature.key === teamChatFeatureKey || feature.key === employeeRequestsFeatureKey ? (
+                  unreadFor(feature.key) > 0 ? (
+                    <span
+                      className={cn(
+                        'ml-auto shrink-0 rounded-full px-1.5 text-[11px] font-bold leading-5',
+                        activeKey === feature.key ? 'bg-white text-evergreen' : 'bg-evergreen text-white',
+                      )}
+                    >
+                      {unreadFor(feature.key)}
+                    </span>
+                  ) : null
                 ) : feature.section ? (
                   <span className="ws-nav-count">{countFor(feature)}</span>
                 ) : null}
@@ -220,8 +282,8 @@ export function WorkspaceView({
         </div>
       </aside>
 
-      <main className={cn('ws-main', activeKey === chatWithHomeFeatureKey && 'ws-chat-main')}>
-        {preview && activeKey !== chatWithHomeFeatureKey && (
+      <main className={cn('ws-main', fullPane && 'ws-chat-main')}>
+        {preview && !fullPane && (
           <div className="mb-5 flex items-start gap-2 border border-line bg-sage/10 p-3 text-xs text-ink-soft">
             <Info className="mt-0.5 size-3.5 shrink-0 text-evergreen" aria-hidden="true" />
             <p>
@@ -234,7 +296,7 @@ export function WorkspaceView({
           </div>
         )}
 
-        {adminPreviewing && activeFeature && (
+        {inlinePreview && activeFeature && (
           <div className="mb-5 flex items-center gap-2 border border-line bg-sage/10 px-3 py-2 text-xs text-ink-soft">
             <ShieldCheck className="size-3.5 shrink-0 text-evergreen" aria-hidden="true" />
             <p>
@@ -333,7 +395,25 @@ export function WorkspaceView({
           <ChatExperience identity={chatIdentity} embedded onExit={() => setSection(defaultKey)} />
         )}
 
-        {activeKey !== 'formulary' && activeKey !== 'account' && activeKey !== chatWithHomeFeatureKey && activeFeature && (
+        {activeKey === teamChatFeatureKey && teamChatVisible && (
+          <TeamChat
+            embedded
+            adminPreview={adminPreviewing}
+            onExit={() => setSection(defaultKey)}
+            onUnreadChange={onTeamUnread}
+          />
+        )}
+
+        {activeKey === employeeRequestsFeatureKey && requestsVisible && (
+          <EmployeeRequests
+            embedded
+            adminPreview={adminPreviewing}
+            onExit={() => setSection(defaultKey)}
+            onUnreadChange={onRequestsUnread}
+          />
+        )}
+
+        {!fullPane && activeKey !== 'formulary' && activeKey !== 'account' && activeFeature && (
           <>
             <h1 className="ws-title">{activeFeature.name}</h1>
             <p className="ws-subtitle">{activeFeature.description}</p>

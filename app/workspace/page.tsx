@@ -4,7 +4,14 @@ import { redirect } from 'next/navigation'
 import { ShieldCheck, Wrench } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getSessionTenant, getTenantFeatureKeys } from '@/lib/features/server'
-import { featureRegistry, toClientFeatures } from '@/lib/features/registry'
+import {
+  employeeRequestsFeatureKey,
+  featureRegistry,
+  teamChatFeatureKey,
+  toClientFeatures,
+} from '@/lib/features/registry'
+import { countTeamChatUnread } from '@/lib/team/server'
+import { countEmployeeRequestUnread } from '@/lib/requests/server'
 import { loadWorkspaceData } from '@/lib/workspace/data'
 import { previewWorkspace } from '@/lib/workspace/preview'
 import { loadTenantIdentity } from '@/lib/tenant/server'
@@ -103,6 +110,16 @@ export default async function WorkspacePage() {
     getTenantFeatureKeys(context.tenantId),
   ])
 
+  // Unread totals for the rail badges. A platform admin previewing an off feature
+  // still gets a count; the loaders fail closed (0) when the SQL is not applied.
+  const enabledSet = new Set(enabledKeys)
+  const [teamChatUnread, requestsUnread] = await Promise.all([
+    enabledSet.has(teamChatFeatureKey) || isPlatformAdmin ? countTeamChatUnread(context.userId) : 0,
+    enabledSet.has(employeeRequestsFeatureKey) || isPlatformAdmin
+      ? countEmployeeRequestUnread(context.tenantId)
+      : 0,
+  ])
+
   return (
     <WorkspaceView
       tenantName={tenant.name ?? 'Your pharmacy'}
@@ -111,6 +128,7 @@ export default async function WorkspacePage() {
       isPlatformAdmin={isPlatformAdmin}
       data={data}
       features={toClientFeatures(enabledKeys)}
+      unread={{ teamChat: teamChatUnread, employeeRequests: requestsUnread }}
     />
   )
 }

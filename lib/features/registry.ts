@@ -12,6 +12,8 @@ import type { WorkspaceSectionKey } from '@/lib/workspace/sections'
  * administrator changes a switch — see setTenantFeature in lib/admin/data.ts.
  */
 export const chatWithHomeFeatureKey = 'chat-with-home'
+export const teamChatFeatureKey = 'team_chat'
+export const employeeRequestsFeatureKey = 'employee_requests'
 
 export type FeatureDefinition = {
   key: string
@@ -92,6 +94,25 @@ export const featureRegistry: FeatureDefinition[] = [
     description: 'Secure messaging between the pharmacy and the nursing homes it serves.',
     sidebar: { label: 'Chat with Home', icon: 'message' },
     route: '/chat',
+  },
+  {
+    // Shared with the Employee Portal's staff messaging. Pharmacy staff only ever
+    // see channels belonging to their own pharmacy, and only while this is on.
+    key: teamChatFeatureKey,
+    name: 'Team Chat',
+    description: 'Secure messaging between the staff at your pharmacy.',
+    sidebar: { label: 'Team Chat', icon: 'chat' },
+    route: '/workspace/team_chat',
+    load: () => import('@/components/team/team-chat-route'),
+  },
+  {
+    // The inbox for conversations started by employees in the Employee Portal.
+    key: employeeRequestsFeatureKey,
+    name: 'Employee Requests',
+    description: 'An inbox for requests started by employees in the Employee Portal.',
+    sidebar: { label: 'Employee Requests', icon: 'inbox' },
+    route: '/workspace/employee_requests',
+    load: () => import('@/components/requests/employee-requests-route'),
   },
 ]
 
